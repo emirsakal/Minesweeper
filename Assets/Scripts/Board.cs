@@ -1,5 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public enum GameState
+{
+    Playing,
+    Won,
+    Lost
+}
 
 public class Board : MonoBehaviour
 {
@@ -11,14 +19,22 @@ public class Board : MonoBehaviour
     private Cell[,] cells;
     private GameObject[,] cellObjects;
     private bool firstClickDone = false;
-    private bool gameOver = false;
+    private GameState gameState = GameState.Playing;
+
+    private Vector2Int explodedMinePos;
+    private int flagCount = 0;
+    private float timer = 0f;
+
+    private GameUI gameUI;
 
     private const float CellSize = 1f;
     private const float CellScale = 0.9f;
 
-    private static readonly Color ClosedColor = new Color(0.7f, 0.7f, 0.7f);
-    private static readonly Color RevealedColor = new Color(0.85f, 0.85f, 0.85f);
+    private static readonly Color ClosedColor = new Color(0.55f, 0.55f, 0.6f);
+    private static readonly Color RevealedColor = new Color(0.9f, 0.88f, 0.82f);
     private static readonly Color MineColor = new Color(0.9f, 0.2f, 0.2f);
+    private static readonly Color ExplodedMineColor = new Color(1.0f, 0.5f, 0.0f);
+    private static readonly Color WrongFlagColor = new Color(0.9f, 0.88f, 0.82f);
 
     private static readonly Color[] NumberColors = new Color[]
     {
@@ -38,11 +54,19 @@ public class Board : MonoBehaviour
         GenerateBoard();
         DrawBoard();
         CenterCamera();
+        CreateUI();
     }
 
     private void Update()
     {
-        if (gameOver) return;
+        if (gameState != GameState.Playing) return;
+
+        // Update timer
+        if (firstClickDone)
+        {
+            timer += Time.deltaTime;
+            gameUI.UpdateTimer(Mathf.FloorToInt(timer));
+        }
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -56,6 +80,13 @@ public class Board : MonoBehaviour
             if (gridPos.HasValue)
                 ToggleFlag(gridPos.Value.x, gridPos.Value.y);
         }
+    }
+
+    private void CreateUI()
+    {
+        GameObject uiGO = new GameObject("GameUI");
+        gameUI = uiGO.AddComponent<GameUI>();
+        gameUI.Initialize(mineCount, this);
     }
 
     private Vector2Int? GetGridPosition()
@@ -192,7 +223,7 @@ public class Board : MonoBehaviour
 
         if (cell.type == CellType.Mine)
         {
-            GameOver();
+            GameOver(x, y);
             return;
         }
 
@@ -200,11 +231,13 @@ public class Board : MonoBehaviour
         {
             cell.isRevealed = true;
             UpdateCellVisual(x, y);
+            CheckWin();
             return;
         }
 
         // Empty cell - flood fill
         FloodFill(x, y);
+        CheckWin();
     }
 
     private void FloodFill(int x, int y)
@@ -246,26 +279,68 @@ public class Board : MonoBehaviour
             return;
 
         cell.isFlagged = !cell.isFlagged;
+        flagCount += cell.isFlagged ? 1 : -1;
         UpdateCellVisual(x, y);
+        gameUI.UpdateMineCounter(mineCount - flagCount);
     }
 
-    private void GameOver()
+    private void CheckWin()
     {
-        gameOver = true;
-        Debug.Log("Game Over!");
-
-        // Reveal all mines
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                if (cells[x, y].type == CellType.Mine)
+                Cell cell = cells[x, y];
+                if (cell.type != CellType.Mine && !cell.isRevealed)
+                    return;
+            }
+        }
+
+        gameState = GameState.Won;
+        Debug.Log("You Win!");
+        gameUI.ShowEndGame(true);
+    }
+
+    private void GameOver(int clickedX, int clickedY)
+    {
+        gameState = GameState.Lost;
+        explodedMinePos = new Vector2Int(clickedX, clickedY);
+        Debug.Log("Game Over!");
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Cell cell = cells[x, y];
+
+                if (cell.type == CellType.Mine)
                 {
-                    cells[x, y].isRevealed = true;
+                    cell.isRevealed = true;
                     UpdateCellVisual(x, y);
+                }
+                else if (cell.isFlagged)
+                {
+                    // Wrong flag - not a mine but flagged
+                    UpdateWrongFlagVisual(x, y);
                 }
             }
         }
+
+        gameUI.ShowEndGame(false);
+    }
+
+    private void UpdateWrongFlagVisual(int x, int y)
+    {
+        GameObject cellGO = cellObjects[x, y];
+        SpriteRenderer sr = cellGO.GetComponent<SpriteRenderer>();
+
+        foreach (Transform child in cellGO.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        sr.color = WrongFlagColor;
+        CreateTextOnCell(cellGO, "X", MineColor);
     }
 
     private void DrawBoard()
@@ -320,7 +395,9 @@ public class Board : MonoBehaviour
         {
             if (cell.type == CellType.Mine)
             {
-                sr.color = MineColor;
+                bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
+                sr.color = isExploded ? ExplodedMineColor : MineColor;
+                CreateTextOnCell(cellGO, "*", Color.black);
             }
             else
             {
@@ -379,5 +456,10 @@ public class Board : MonoBehaviour
         float requiredSize = Mathf.Max(halfHeight, halfWidth / screenAspect);
 
         cam.orthographicSize = requiredSize;
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
