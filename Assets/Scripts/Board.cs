@@ -6,15 +6,18 @@ public class Board : MonoBehaviour
     [SerializeField] private int width = 9;
     [SerializeField] private int height = 9;
     [SerializeField] private int mineCount = 10;
-    [SerializeField] private bool debugMode = true;
+    [SerializeField] private bool debugMode = false;
 
     private Cell[,] cells;
     private GameObject[,] cellObjects;
+    private bool firstClickDone = false;
+    private bool gameOver = false;
 
     private const float CellSize = 1f;
     private const float CellScale = 0.9f;
 
     private static readonly Color ClosedColor = new Color(0.7f, 0.7f, 0.7f);
+    private static readonly Color RevealedColor = new Color(0.85f, 0.85f, 0.85f);
     private static readonly Color MineColor = new Color(0.9f, 0.2f, 0.2f);
 
     private static readonly Color[] NumberColors = new Color[]
@@ -33,10 +36,50 @@ public class Board : MonoBehaviour
     private void Awake()
     {
         GenerateBoard();
-        PlaceMines(new Vector2Int(0, 0));
-        CalculateNumbers();
         DrawBoard();
         CenterCamera();
+    }
+
+    private void Update()
+    {
+        if (gameOver) return;
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector2Int? gridPos = GetGridPosition();
+            if (gridPos.HasValue)
+                HandleLeftClick(gridPos.Value);
+        }
+        else if (Input.GetMouseButtonDown(1))
+        {
+            Vector2Int? gridPos = GetGridPosition();
+            if (gridPos.HasValue)
+                ToggleFlag(gridPos.Value.x, gridPos.Value.y);
+        }
+    }
+
+    private Vector2Int? GetGridPosition()
+    {
+        Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        int x = Mathf.RoundToInt(worldPos.x / CellSize);
+        int y = Mathf.RoundToInt(worldPos.y / CellSize);
+
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return null;
+
+        return new Vector2Int(x, y);
+    }
+
+    private void HandleLeftClick(Vector2Int pos)
+    {
+        if (!firstClickDone)
+        {
+            firstClickDone = true;
+            PlaceMines(pos);
+            CalculateNumbers();
+        }
+
+        RevealCell(pos.x, pos.y);
     }
 
     private void GenerateBoard()
@@ -140,6 +183,91 @@ public class Board : MonoBehaviour
         return neighbors;
     }
 
+    private void RevealCell(int x, int y)
+    {
+        Cell cell = cells[x, y];
+
+        if (cell.isRevealed || cell.isFlagged)
+            return;
+
+        if (cell.type == CellType.Mine)
+        {
+            GameOver();
+            return;
+        }
+
+        if (cell.type == CellType.Number)
+        {
+            cell.isRevealed = true;
+            UpdateCellVisual(x, y);
+            return;
+        }
+
+        // Empty cell - flood fill
+        FloodFill(x, y);
+    }
+
+    private void FloodFill(int x, int y)
+    {
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+        queue.Enqueue(new Vector2Int(x, y));
+
+        while (queue.Count > 0)
+        {
+            Vector2Int pos = queue.Dequeue();
+            Cell cell = cells[pos.x, pos.y];
+
+            if (cell.isRevealed || cell.isFlagged || cell.type == CellType.Mine)
+                continue;
+
+            cell.isRevealed = true;
+            UpdateCellVisual(pos.x, pos.y);
+
+            // Only continue spreading from empty (0) cells
+            if (cell.type == CellType.Empty)
+            {
+                List<Cell> neighbors = GetNeighbors(pos.x, pos.y);
+                foreach (Cell neighbor in neighbors)
+                {
+                    if (!neighbor.isRevealed && !neighbor.isFlagged)
+                    {
+                        queue.Enqueue(neighbor.position);
+                    }
+                }
+            }
+        }
+    }
+
+    private void ToggleFlag(int x, int y)
+    {
+        Cell cell = cells[x, y];
+
+        if (cell.isRevealed)
+            return;
+
+        cell.isFlagged = !cell.isFlagged;
+        UpdateCellVisual(x, y);
+    }
+
+    private void GameOver()
+    {
+        gameOver = true;
+        Debug.Log("Game Over!");
+
+        // Reveal all mines
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (cells[x, y].type == CellType.Mine)
+                {
+                    cells[x, y].isRevealed = true;
+                    UpdateCellVisual(x, y);
+                }
+            }
+        }
+    }
+
     private void DrawBoard()
     {
         cellObjects = new GameObject[width, height];
@@ -148,8 +276,6 @@ public class Board : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                Cell cell = cells[x, y];
-
                 GameObject cellGO = new GameObject($"Cell ({x}, {y})");
                 cellGO.transform.parent = transform;
                 cellGO.transform.position = new Vector3(x * CellSize, y * CellSize, 0f);
@@ -163,51 +289,68 @@ public class Board : MonoBehaviour
                     sr.sprite = CreateDefaultSprite();
                 }
 
-                if (debugMode)
-                {
-                    if (cell.type == CellType.Mine)
-                    {
-                        sr.color = MineColor;
-                    }
-                    else
-                    {
-                        sr.color = ClosedColor;
-                    }
-
-                    if (cell.type == CellType.Number && cell.number > 0)
-                    {
-                        CreateNumberText(cellGO, cell.number);
-                    }
-                }
-                else
-                {
-                    sr.color = ClosedColor;
-                }
-
+                sr.color = ClosedColor;
                 cellObjects[x, y] = cellGO;
             }
         }
     }
 
-    private void CreateNumberText(GameObject parent, int number)
+    private void UpdateCellVisual(int x, int y)
     {
-        GameObject textGO = new GameObject("Number");
+        Cell cell = cells[x, y];
+        GameObject cellGO = cellObjects[x, y];
+        SpriteRenderer sr = cellGO.GetComponent<SpriteRenderer>();
+
+        // Clear existing child text objects
+        foreach (Transform child in cellGO.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        if (!cell.isRevealed)
+        {
+            sr.color = ClosedColor;
+
+            if (cell.isFlagged)
+            {
+                CreateTextOnCell(cellGO, "F", MineColor);
+            }
+        }
+        else
+        {
+            if (cell.type == CellType.Mine)
+            {
+                sr.color = MineColor;
+            }
+            else
+            {
+                sr.color = RevealedColor;
+
+                if (cell.type == CellType.Number && cell.number > 0)
+                {
+                    CreateTextOnCell(cellGO, cell.number.ToString(), NumberColors[cell.number]);
+                }
+            }
+        }
+    }
+
+    private void CreateTextOnCell(GameObject parent, string text, Color color)
+    {
+        GameObject textGO = new GameObject("Text");
         textGO.transform.parent = parent.transform;
         textGO.transform.localPosition = Vector3.zero;
 
         TextMesh textMesh = textGO.AddComponent<TextMesh>();
-        textMesh.text = number.ToString();
+        textMesh.text = text;
         textMesh.characterSize = 0.2f;
         textMesh.fontSize = 40;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
-        textMesh.color = NumberColors[number];
+        textMesh.color = color;
 
-        // Render text in front of the sprite
         MeshRenderer mr = textGO.GetComponent<MeshRenderer>();
         mr.sortingOrder = 1;
 
-        // Keep text at unit scale so it stays inside the 0.9 cell
         textGO.transform.localScale = Vector3.one;
     }
 
