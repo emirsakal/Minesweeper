@@ -30,11 +30,11 @@ public class Board : MonoBehaviour
     private const float CellSize = 1f;
     private const float CellScale = 0.9f;
 
-    private static readonly Color ClosedColor = new Color(0.55f, 0.55f, 0.6f);
-    private static readonly Color RevealedColor = new Color(0.9f, 0.88f, 0.82f);
+    private static readonly Color ClosedColor = new Color(0.78f, 0.78f, 0.82f);
+    private static readonly Color RevealedColor = new Color(0.5f, 0.5f, 0.5f);
     private static readonly Color MineColor = new Color(0.9f, 0.2f, 0.2f);
     private static readonly Color ExplodedMineColor = new Color(1.0f, 0.5f, 0.0f);
-    private static readonly Color WrongFlagColor = new Color(0.9f, 0.88f, 0.82f);
+    private static readonly Color WrongFlagColor = new Color(0.5f, 0.5f, 0.5f);
 
     private static readonly Color[] NumberColors = new Color[]
     {

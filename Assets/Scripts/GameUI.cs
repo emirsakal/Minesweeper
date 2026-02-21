@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 public class GameUI : MonoBehaviour
@@ -33,6 +34,15 @@ public class GameUI : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
 
         canvasGO.AddComponent<GraphicRaycaster>();
+
+        // EventSystem is required for UI button clicks to register
+        if (FindAnyObjectByType<EventSystem>() == null)
+        {
+            GameObject eventSystemGO = new GameObject("EventSystem");
+            eventSystemGO.transform.SetParent(transform);
+            eventSystemGO.AddComponent<EventSystem>();
+            eventSystemGO.AddComponent<StandaloneInputModule>();
+        }
 
         CreateTopPanel(canvasGO.transform);
         CreateEndGamePanel(canvasGO.transform);
