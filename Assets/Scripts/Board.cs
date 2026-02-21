@@ -197,8 +197,8 @@ public class Board : MonoBehaviour
 
         TextMesh textMesh = textGO.AddComponent<TextMesh>();
         textMesh.text = number.ToString();
-        textMesh.characterSize = 0.5f;
-        textMesh.fontSize = 48;
+        textMesh.characterSize = 0.3f;
+        textMesh.fontSize = 44;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
         textMesh.color = NumberColors[number];
@@ -207,12 +207,8 @@ public class Board : MonoBehaviour
         MeshRenderer mr = textGO.GetComponent<MeshRenderer>();
         mr.sortingOrder = 1;
 
-        // Scale text relative to parent so it fits inside the cell
-        textGO.transform.localScale = new Vector3(
-            1f / CellScale,
-            1f / CellScale,
-            1f
-        );
+        // Keep text at unit scale so it stays inside the 0.9 cell
+        textGO.transform.localScale = Vector3.one;
     }
 
     private Sprite CreateDefaultSprite()
