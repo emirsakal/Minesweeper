@@ -11,13 +11,13 @@ public enum GameState
 
 public class Board : MonoBehaviour
 {
-    [SerializeField] private int width = 9;
-    [SerializeField] private int height = 9;
-    [SerializeField] private int mineCount = 10;
-    [SerializeField] private bool debugMode = false;
+    private int width;
+    private int height;
+    private int mineCount;
 
     private Cell[,] cells;
     private GameObject[,] cellObjects;
+    private bool boardInitialized = false;
     private bool firstClickDone = false;
     private GameState gameState = GameState.Playing;
 
@@ -26,15 +26,26 @@ public class Board : MonoBehaviour
     private float timer = 0f;
 
     private GameUI gameUI;
+    private Sprite cachedSprite;
 
     private const float CellSize = 1f;
     private const float CellScale = 0.9f;
 
+    // Cell colors
     private static readonly Color ClosedColor = new Color(0.78f, 0.78f, 0.82f);
     private static readonly Color RevealedColor = new Color(0.5f, 0.5f, 0.5f);
     private static readonly Color MineColor = new Color(0.9f, 0.2f, 0.2f);
     private static readonly Color ExplodedMineColor = new Color(1.0f, 0.5f, 0.0f);
     private static readonly Color WrongFlagColor = new Color(0.5f, 0.5f, 0.5f);
+
+    // Bevel colors (closed cell 3D effect)
+    private static readonly Color BevelHighlight = new Color(0.92f, 0.92f, 0.96f);
+    private static readonly Color BevelShadow = new Color(0.58f, 0.58f, 0.62f);
+
+    // Border for revealed cells
+    private static readonly Color RevealedBorder = new Color(0.4f, 0.4f, 0.4f);
+
+    private static readonly Color FlagColor = new Color(0.9f, 0.1f, 0.1f);
 
     private static readonly Color[] NumberColors = new Color[]
     {
@@ -51,17 +62,14 @@ public class Board : MonoBehaviour
 
     private void Awake()
     {
-        GenerateBoard();
-        DrawBoard();
-        CenterCamera();
+        SetCameraBackground();
         CreateUI();
     }
 
     private void Update()
     {
-        if (gameState != GameState.Playing) return;
+        if (!boardInitialized || gameState != GameState.Playing) return;
 
-        // Update timer
         if (firstClickDone)
         {
             timer += Time.deltaTime;
@@ -82,11 +90,37 @@ public class Board : MonoBehaviour
         }
     }
 
+    private void SetCameraBackground()
+    {
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            cam.backgroundColor = new Color(0.2f, 0.2f, 0.25f);
+        }
+    }
+
     private void CreateUI()
     {
         GameObject uiGO = new GameObject("GameUI");
         gameUI = uiGO.AddComponent<GameUI>();
-        gameUI.Initialize(mineCount, this);
+        gameUI.Initialize(this);
+    }
+
+    public void InitializeBoard(int w, int h, int mines)
+    {
+        width = w;
+        height = h;
+        mineCount = mines;
+
+        boardInitialized = true;
+        firstClickDone = false;
+        gameState = GameState.Playing;
+        flagCount = 0;
+        timer = 0f;
+
+        GenerateBoard();
+        DrawBoard();
+        CenterCamera();
     }
 
     private Vector2Int? GetGridPosition()
@@ -256,7 +290,6 @@ public class Board : MonoBehaviour
             cell.isRevealed = true;
             UpdateCellVisual(pos.x, pos.y);
 
-            // Only continue spreading from empty (0) cells
             if (cell.type == CellType.Empty)
             {
                 List<Cell> neighbors = GetNeighbors(pos.x, pos.y);
@@ -320,7 +353,6 @@ public class Board : MonoBehaviour
                 }
                 else if (cell.isFlagged)
                 {
-                    // Wrong flag - not a mine but flagged
                     UpdateWrongFlagVisual(x, y);
                 }
             }
@@ -340,6 +372,7 @@ public class Board : MonoBehaviour
         }
 
         sr.color = WrongFlagColor;
+        AddBorder(cellGO);
         CreateTextOnCell(cellGO, "X", MineColor);
     }
 
@@ -357,15 +390,10 @@ public class Board : MonoBehaviour
                 cellGO.transform.localScale = new Vector3(CellScale, CellScale, 1f);
 
                 SpriteRenderer sr = cellGO.AddComponent<SpriteRenderer>();
-                sr.sprite = Resources.Load<Sprite>("Sprites/Square");
-
-                if (sr.sprite == null)
-                {
-                    sr.sprite = CreateDefaultSprite();
-                }
-
-                sr.color = ClosedColor;
+                sr.sprite = GetSprite();
                 cellObjects[x, y] = cellGO;
+
+                UpdateCellVisual(x, y);
             }
         }
     }
@@ -376,7 +404,7 @@ public class Board : MonoBehaviour
         GameObject cellGO = cellObjects[x, y];
         SpriteRenderer sr = cellGO.GetComponent<SpriteRenderer>();
 
-        // Clear existing child text objects
+        // Clear existing child objects
         foreach (Transform child in cellGO.transform)
         {
             Destroy(child.gameObject);
@@ -385,10 +413,11 @@ public class Board : MonoBehaviour
         if (!cell.isRevealed)
         {
             sr.color = ClosedColor;
+            AddBevel(cellGO);
 
             if (cell.isFlagged)
             {
-                CreateTextOnCell(cellGO, "F", MineColor);
+                CreateTextOnCell(cellGO, "\u25B6", FlagColor);
             }
         }
         else
@@ -397,11 +426,12 @@ public class Board : MonoBehaviour
             {
                 bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
                 sr.color = isExploded ? ExplodedMineColor : MineColor;
-                CreateTextOnCell(cellGO, "*", Color.black);
+                CreateTextOnCell(cellGO, "\u25CF", Color.black);
             }
             else
             {
                 sr.color = RevealedColor;
+                AddBorder(cellGO);
 
                 if (cell.type == CellType.Number && cell.number > 0)
                 {
@@ -409,6 +439,45 @@ public class Board : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void AddBevel(GameObject cellGO)
+    {
+        float size = 0.08f;
+        float offset = 0.5f - size / 2f;
+        float innerLen = 1f - size * 2f;
+
+        // Top + Left = highlight
+        CreateEdge(cellGO, new Vector3(0, offset, 0), new Vector3(1, size, 1), BevelHighlight);
+        CreateEdge(cellGO, new Vector3(-offset, 0, 0), new Vector3(size, innerLen, 1), BevelHighlight);
+        // Bottom + Right = shadow
+        CreateEdge(cellGO, new Vector3(0, -offset, 0), new Vector3(1, size, 1), BevelShadow);
+        CreateEdge(cellGO, new Vector3(offset, 0, 0), new Vector3(size, innerLen, 1), BevelShadow);
+    }
+
+    private void AddBorder(GameObject cellGO)
+    {
+        float size = 0.03f;
+        float offset = 0.5f - size / 2f;
+        float innerLen = 1f - size * 2f;
+
+        CreateEdge(cellGO, new Vector3(0, offset, 0), new Vector3(1, size, 1), RevealedBorder);
+        CreateEdge(cellGO, new Vector3(-offset, 0, 0), new Vector3(size, innerLen, 1), RevealedBorder);
+        CreateEdge(cellGO, new Vector3(0, -offset, 0), new Vector3(1, size, 1), RevealedBorder);
+        CreateEdge(cellGO, new Vector3(offset, 0, 0), new Vector3(size, innerLen, 1), RevealedBorder);
+    }
+
+    private void CreateEdge(GameObject parent, Vector3 localPos, Vector3 localScale, Color color)
+    {
+        GameObject edge = new GameObject("Edge");
+        edge.transform.SetParent(parent.transform, false);
+        edge.transform.localPosition = localPos;
+        edge.transform.localScale = localScale;
+
+        SpriteRenderer sr = edge.AddComponent<SpriteRenderer>();
+        sr.sprite = GetSprite();
+        sr.color = color;
+        sr.sortingOrder = 1;
     }
 
     private void CreateTextOnCell(GameObject parent, string text, Color color)
@@ -426,17 +495,25 @@ public class Board : MonoBehaviour
         textMesh.color = color;
 
         MeshRenderer mr = textGO.GetComponent<MeshRenderer>();
-        mr.sortingOrder = 1;
+        mr.sortingOrder = 2;
 
         textGO.transform.localScale = Vector3.one;
     }
 
-    private Sprite CreateDefaultSprite()
+    private Sprite GetSprite()
     {
-        Texture2D tex = new Texture2D(1, 1);
-        tex.SetPixel(0, 0, Color.white);
-        tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+        if (cachedSprite != null) return cachedSprite;
+
+        cachedSprite = Resources.Load<Sprite>("Sprites/Square");
+        if (cachedSprite == null)
+        {
+            Texture2D tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+            cachedSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+        }
+
+        return cachedSprite;
     }
 
     private void CenterCamera()
@@ -450,7 +527,7 @@ public class Board : MonoBehaviour
 
         cam.orthographic = true;
 
-        float halfHeight = height * CellSize * 0.5f + 1f;
+        float halfHeight = height * CellSize * 0.5f + 1.5f;
         float halfWidth = width * CellSize * 0.5f + 1f;
         float screenAspect = (float)Screen.width / Screen.height;
         float requiredSize = Mathf.Max(halfHeight, halfWidth / screenAspect);
