@@ -197,8 +197,8 @@ public class Board : MonoBehaviour
 
         TextMesh textMesh = textGO.AddComponent<TextMesh>();
         textMesh.text = number.ToString();
-        textMesh.characterSize = 0.3f;
-        textMesh.fontSize = 44;
+        textMesh.characterSize = 0.2f;
+        textMesh.fontSize = 40;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
         textMesh.color = NumberColors[number];
