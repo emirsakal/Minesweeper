@@ -317,6 +317,10 @@ public class Board : MonoBehaviour
         if (cell.isRevealed)
             return;
 
+        // Prevent placing more flags than mines
+        if (!cell.isFlagged && flagCount >= mineCount)
+            return;
+
         cell.isFlagged = !cell.isFlagged;
         flagCount += cell.isFlagged ? 1 : -1;
         UpdateCellVisual(x, y);

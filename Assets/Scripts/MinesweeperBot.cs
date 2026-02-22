@@ -72,6 +72,9 @@ public class MinesweeperBot : MonoBehaviour
                 foreach (var pos in safeReveals)
                 {
                     if (board.IsGameOver() || !isRunning) break;
+                    // Skip if already revealed by a previous flood fill
+                    Cell c = board.GetCell(pos.x, pos.y);
+                    if (c.isRevealed || c.isFlagged) continue;
                     yield return DoHighlight(pos.x, pos.y, HighlightSafe);
                     board.BotRevealCell(pos.x, pos.y);
                     yield return new WaitForSeconds(MoveDelay);
@@ -86,6 +89,9 @@ public class MinesweeperBot : MonoBehaviour
                 foreach (var pos in mineFlags)
                 {
                     if (board.IsGameOver() || !isRunning) break;
+                    // Skip if already flagged or revealed
+                    Cell c = board.GetCell(pos.x, pos.y);
+                    if (c.isRevealed || c.isFlagged) continue;
                     yield return DoHighlight(pos.x, pos.y, HighlightMine);
                     board.BotToggleFlag(pos.x, pos.y);
                     yield return new WaitForSeconds(MoveDelay);
@@ -116,6 +122,8 @@ public class MinesweeperBot : MonoBehaviour
         highlightedCell = new Vector2Int(x, y);
         board.HighlightCell(x, y, color);
         yield return new WaitForSeconds(HighlightDuration);
+        // Always restore proper visual after highlight
+        board.RestoreCellVisual(x, y);
         highlightedCell = null;
     }
 
