@@ -28,6 +28,8 @@ public class Board : MonoBehaviour
     private GameUI gameUI;
     private Sprite cachedSprite;
 
+    public bool IsBotPlaying { get; set; }
+
     private const float CellSize = 1f;
     private const float CellScale = 0.9f;
 
@@ -76,6 +78,9 @@ public class Board : MonoBehaviour
             gameUI.UpdateTimer(Mathf.FloorToInt(timer));
         }
 
+        // Block player input while bot is playing
+        if (IsBotPlaying) return;
+
         if (Input.GetMouseButtonDown(0))
         {
             Vector2Int? gridPos = GetGridPosition();
@@ -117,6 +122,7 @@ public class Board : MonoBehaviour
         gameState = GameState.Playing;
         flagCount = 0;
         timer = 0f;
+        IsBotPlaying = false;
 
         GenerateBoard();
         DrawBoard();
@@ -533,6 +539,70 @@ public class Board : MonoBehaviour
         float requiredSize = Mathf.Max(halfHeight, halfWidth / screenAspect);
 
         cam.orthographicSize = requiredSize;
+    }
+
+    // ========== PUBLIC API FOR BOT ==========
+
+    public Cell GetCell(int x, int y)
+    {
+        return cells[x, y];
+    }
+
+    public int GetWidth()
+    {
+        return width;
+    }
+
+    public int GetHeight()
+    {
+        return height;
+    }
+
+    public bool IsGameOver()
+    {
+        return gameState != GameState.Playing;
+    }
+
+    public bool IsFirstClickDone()
+    {
+        return firstClickDone;
+    }
+
+    public void BotRevealCell(int x, int y)
+    {
+        if (gameState != GameState.Playing) return;
+
+        if (!firstClickDone)
+        {
+            firstClickDone = true;
+            PlaceMines(new Vector2Int(x, y));
+            CalculateNumbers();
+        }
+
+        RevealCell(x, y);
+    }
+
+    public void BotToggleFlag(int x, int y)
+    {
+        if (gameState != GameState.Playing) return;
+        ToggleFlag(x, y);
+    }
+
+    public void HighlightCell(int x, int y, Color color)
+    {
+        if (cellObjects != null && x >= 0 && x < width && y >= 0 && y < height)
+        {
+            SpriteRenderer sr = cellObjects[x, y].GetComponent<SpriteRenderer>();
+            sr.color = color;
+        }
+    }
+
+    public void RestoreCellVisual(int x, int y)
+    {
+        if (cellObjects != null && x >= 0 && x < width && y >= 0 && y < height)
+        {
+            UpdateCellVisual(x, y);
+        }
     }
 
     public void RestartGame()

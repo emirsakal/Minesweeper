@@ -17,6 +17,10 @@ public class GameUI : MonoBehaviour
     private TextMeshProUGUI timerText;
     private TextMeshProUGUI restartFaceText;
 
+    // Bot
+    private MinesweeperBot bot;
+    private TextMeshProUGUI botButtonText;
+
     // End game
     private GameObject endGamePanel;
     private TextMeshProUGUI endGameMessage;
@@ -25,6 +29,17 @@ public class GameUI : MonoBehaviour
     {
         this.board = board;
         CreateCanvas();
+    }
+
+    private void Update()
+    {
+        // Auto-update bot button text when bot finishes
+        if (bot != null && !bot.IsRunning && botButtonText != null
+            && botButtonText.text == "Dur")
+        {
+            botButtonText.text = "Bot";
+            botButtonText.color = Color.white;
+        }
     }
 
     private void CreateCanvas()
@@ -140,6 +155,13 @@ public class GameUI : MonoBehaviour
         UpdateTimer(0);
         UpdateFace(GameState.Playing);
         board.InitializeBoard(w, h, mines);
+
+        // Create bot
+        if (bot == null)
+        {
+            bot = gameObject.AddComponent<MinesweeperBot>();
+        }
+        bot.Initialize(board);
     }
 
     // ========== TOP PANEL (HUD) ==========
@@ -175,33 +197,61 @@ public class GameUI : MonoBehaviour
         mineCounterText.fontSize = 28;
         mineCounterText.color = Color.red;
 
-        // Restart button (center) with face
-        GameObject btnGO = new GameObject("RestartButton");
-        btnGO.transform.SetParent(topPanel.transform, false);
-        RectTransform btnRect = btnGO.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.pivot = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = Vector2.zero;
-        btnRect.sizeDelta = new Vector2(44, 38);
+        // Restart button (center-left) with face
+        GameObject restartBtnGO = new GameObject("RestartButton");
+        restartBtnGO.transform.SetParent(topPanel.transform, false);
+        RectTransform restartRect = restartBtnGO.AddComponent<RectTransform>();
+        restartRect.anchorMin = new Vector2(0.5f, 0.5f);
+        restartRect.anchorMax = new Vector2(0.5f, 0.5f);
+        restartRect.pivot = new Vector2(0.5f, 0.5f);
+        restartRect.anchoredPosition = new Vector2(-32, 0);
+        restartRect.sizeDelta = new Vector2(44, 38);
 
-        Image btnBg = btnGO.AddComponent<Image>();
-        btnBg.color = new Color(0.35f, 0.35f, 0.4f);
+        Image restartBg = restartBtnGO.AddComponent<Image>();
+        restartBg.color = new Color(0.35f, 0.35f, 0.4f);
 
-        Button btn = btnGO.AddComponent<Button>();
-        ColorBlock btnColors = btn.colors;
-        btnColors.highlightedColor = new Color(0.45f, 0.45f, 0.5f);
-        btnColors.pressedColor = new Color(0.25f, 0.25f, 0.3f);
-        btn.colors = btnColors;
-        btn.onClick.AddListener(OnRestartClicked);
+        Button restartBtn = restartBtnGO.AddComponent<Button>();
+        ColorBlock restartColors = restartBtn.colors;
+        restartColors.highlightedColor = new Color(0.45f, 0.45f, 0.5f);
+        restartColors.pressedColor = new Color(0.25f, 0.25f, 0.3f);
+        restartBtn.colors = restartColors;
+        restartBtn.onClick.AddListener(OnRestartClicked);
 
-        restartFaceText = CreateTMPText(btnGO.transform, "Face",
+        restartFaceText = CreateTMPText(restartBtnGO.transform, "Face",
             Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
             Vector2.zero, Vector2.zero);
         restartFaceText.alignment = TextAlignmentOptions.Center;
         restartFaceText.fontSize = 22;
         restartFaceText.color = Color.yellow;
         restartFaceText.text = ":)";
+
+        // Bot button (center-right)
+        GameObject botBtnGO = new GameObject("BotButton");
+        botBtnGO.transform.SetParent(topPanel.transform, false);
+        RectTransform botRect = botBtnGO.AddComponent<RectTransform>();
+        botRect.anchorMin = new Vector2(0.5f, 0.5f);
+        botRect.anchorMax = new Vector2(0.5f, 0.5f);
+        botRect.pivot = new Vector2(0.5f, 0.5f);
+        botRect.anchoredPosition = new Vector2(32, 0);
+        botRect.sizeDelta = new Vector2(55, 38);
+
+        Image botBg = botBtnGO.AddComponent<Image>();
+        botBg.color = new Color(0.25f, 0.5f, 0.35f);
+
+        Button botBtn = botBtnGO.AddComponent<Button>();
+        ColorBlock botColors = botBtn.colors;
+        botColors.highlightedColor = new Color(0.35f, 0.6f, 0.45f);
+        botColors.pressedColor = new Color(0.15f, 0.4f, 0.25f);
+        botBtn.colors = botColors;
+        botBtn.onClick.AddListener(OnBotClicked);
+
+        botButtonText = CreateTMPText(botBtnGO.transform, "BotLabel",
+            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
+            Vector2.zero, Vector2.zero);
+        botButtonText.alignment = TextAlignmentOptions.Center;
+        botButtonText.fontSize = 18;
+        botButtonText.color = Color.white;
+        botButtonText.text = "Bot";
 
         // Timer (right)
         timerText = CreateTMPText(topPanel.transform, "Timer",
@@ -212,6 +262,25 @@ public class GameUI : MonoBehaviour
         timerText.color = Color.white;
 
         topPanel.SetActive(false);
+    }
+
+    private void OnBotClicked()
+    {
+        if (bot == null) return;
+        if (board.IsGameOver()) return;
+
+        if (bot.IsRunning)
+        {
+            bot.StopBot();
+            botButtonText.text = "Bot";
+            botButtonText.color = Color.white;
+        }
+        else
+        {
+            bot.StartBot();
+            botButtonText.text = "Dur";
+            botButtonText.color = new Color(1f, 0.8f, 0.3f);
+        }
     }
 
     // ========== END GAME PANEL ==========
@@ -333,6 +402,14 @@ public class GameUI : MonoBehaviour
 
     public void ShowEndGame(bool won)
     {
+        // Stop bot if running
+        if (bot != null && bot.IsRunning)
+        {
+            bot.StopBot();
+            botButtonText.text = "Bot";
+            botButtonText.color = Color.white;
+        }
+
         endGamePanel.SetActive(true);
         UpdateFace(won ? GameState.Won : GameState.Lost);
 
