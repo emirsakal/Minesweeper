@@ -572,6 +572,16 @@ public class Board : MonoBehaviour
         return firstClickDone;
     }
 
+    public int GetMineCount()
+    {
+        return mineCount;
+    }
+
+    public int GetFlagCount()
+    {
+        return flagCount;
+    }
+
     public void BotRevealCell(int x, int y)
     {
         if (gameState != GameState.Playing) return;
