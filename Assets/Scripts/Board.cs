@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -282,19 +283,26 @@ public class Board : MonoBehaviour
 
     private void FloodFill(int x, int y)
     {
-        Queue<Vector2Int> queue = new Queue<Vector2Int>();
-        queue.Enqueue(new Vector2Int(x, y));
+        // BFS collecting cells with wave depth numbers
+        var waveCells = new List<KeyValuePair<Vector2Int, int>>();
+        var queue = new Queue<KeyValuePair<Vector2Int, int>>();
+
+        Vector2Int start = new Vector2Int(x, y);
+        queue.Enqueue(new KeyValuePair<Vector2Int, int>(start, 0));
 
         while (queue.Count > 0)
         {
-            Vector2Int pos = queue.Dequeue();
+            var current = queue.Dequeue();
+            Vector2Int pos = current.Key;
+            int wave = current.Value;
             Cell cell = cells[pos.x, pos.y];
 
             if (cell.isRevealed || cell.isFlagged || cell.type == CellType.Mine)
                 continue;
 
+            // Mark logically revealed IMMEDIATELY (game logic stays synchronous)
             cell.isRevealed = true;
-            UpdateCellVisual(pos.x, pos.y);
+            waveCells.Add(new KeyValuePair<Vector2Int, int>(pos, wave));
 
             if (cell.type == CellType.Empty)
             {
@@ -303,11 +311,63 @@ public class Board : MonoBehaviour
                 {
                     if (!neighbor.isRevealed && !neighbor.isFlagged)
                     {
-                        queue.Enqueue(neighbor.position);
+                        queue.Enqueue(new KeyValuePair<Vector2Int, int>(neighbor.position, wave + 1));
                     }
                 }
             }
         }
+
+        // Start visual wave animation (runs in background, doesn't block gameplay)
+        StartCoroutine(AnimateFloodFill(waveCells));
+    }
+
+    private IEnumerator AnimateFloodFill(List<KeyValuePair<Vector2Int, int>> waveCells)
+    {
+        if (waveCells.Count == 0) yield break;
+
+        int currentWave = 0;
+        int i = 0;
+
+        while (i < waveCells.Count)
+        {
+            // Reveal all cells in the current wave simultaneously
+            while (i < waveCells.Count && waveCells[i].Value == currentWave)
+            {
+                Vector2Int pos = waveCells[i].Key;
+                UpdateCellVisual(pos.x, pos.y);
+                StartCoroutine(AnimateCellScale(pos.x, pos.y));
+                i++;
+            }
+
+            currentWave++;
+
+            // Short delay between waves (0.04s)
+            yield return new WaitForSeconds(0.04f);
+        }
+    }
+
+    private IEnumerator AnimateCellScale(int x, int y)
+    {
+        GameObject cellGO = cellObjects[x, y];
+        float duration = 0.1f;
+        float elapsed = 0f;
+        float startScale = 0.5f;
+        float endScale = CellScale;
+
+        cellGO.transform.localScale = new Vector3(startScale, startScale, 1f);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            // Ease-out: 1 - (1-t)^2
+            t = 1f - (1f - t) * (1f - t);
+            float s = Mathf.Lerp(startScale, endScale, t);
+            cellGO.transform.localScale = new Vector3(s, s, 1f);
+            yield return null;
+        }
+
+        cellGO.transform.localScale = new Vector3(endScale, endScale, 1f);
     }
 
     private void ToggleFlag(int x, int y)
