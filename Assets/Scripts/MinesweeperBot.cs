@@ -410,8 +410,8 @@ public class MinesweeperBot : MonoBehaviour
                         if (dx == 0 && dy == 0) continue;
                         int nx = x + dx, ny = y + dy;
                         if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-                        Cell n = board.GetCell(nx, ny);
-                        if (n.isRevealed && n.number > 0) isBorder = true;
+                        Cell nb = board.GetCell(nx, ny);
+                        if (nb.isRevealed && nb.number > 0) isBorder = true;
                     }
 
                 Vector2Int pos = new Vector2Int(x, y);
