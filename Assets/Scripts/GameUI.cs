@@ -16,6 +16,8 @@ public class GameUI : MonoBehaviour
     private TextMeshProUGUI mineCounterText;
     private TextMeshProUGUI timerText;
     private TextMeshProUGUI restartFaceText;
+    private TextMeshProUGUI controlsHintText;
+    private TextMeshProUGUI statusText;
 
     // Bot
     private MinesweeperBot bot;
@@ -25,6 +27,10 @@ public class GameUI : MonoBehaviour
     private GameObject endGamePanel;
     private TextMeshProUGUI endGameMessage;
 
+    // UX state
+    private bool helpVisible = true;
+    private float statusPulse;
+
     public void Initialize(Board board)
     {
         this.board = board;
@@ -33,6 +39,9 @@ public class GameUI : MonoBehaviour
 
     private void Update()
     {
+        HandleKeyboardShortcuts();
+        UpdateStatusBar();
+
         // Auto-update bot button text when bot finishes
         if (bot != null && !bot.IsRunning && botButtonText != null
             && botButtonText.text == "Dur")
@@ -40,6 +49,56 @@ public class GameUI : MonoBehaviour
             botButtonText.text = "Bot";
             botButtonText.color = Color.white;
         }
+
+        if (controlsHintText != null)
+        {
+            controlsHintText.gameObject.SetActive(helpVisible);
+        }
+    }
+
+    private void HandleKeyboardShortcuts()
+    {
+        if (board == null || topPanel == null || !topPanel.activeSelf) return;
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            OnRestartClicked();
+        }
+
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            OnBotClicked();
+        }
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            helpVisible = !helpVisible;
+        }
+    }
+
+    private void UpdateStatusBar()
+    {
+        if (statusText == null || board == null || topPanel == null || !topPanel.activeSelf) return;
+
+        if (board.IsGameOver())
+        {
+            statusText.text = "Oyun bitti - R ile yeniden basla";
+            statusText.color = new Color(1f, 0.85f, 0.3f);
+            return;
+        }
+
+        if (bot != null && bot.IsRunning)
+        {
+            statusPulse += Time.deltaTime * 4f;
+            float pulse = 0.75f + Mathf.PingPong(statusPulse, 0.25f);
+            statusText.text = "Bot oynuyor... (B ile durdur)";
+            statusText.color = new Color(0.7f, 1f, 0.7f) * pulse;
+            return;
+        }
+
+        statusPulse = 0f;
+        statusText.text = "Hazir - H ile yardim metnini gizle/goster";
+        statusText.color = new Color(0.85f, 0.9f, 1f);
     }
 
     private void CreateCanvas()
@@ -107,6 +166,14 @@ public class GameUI : MonoBehaviour
         title.alignment = TextAlignmentOptions.Center;
         title.color = Color.white;
 
+        TextMeshProUGUI subtitle = CreateTMPText(container.transform, "Subtitle",
+            new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+            new Vector2(0, -52), new Vector2(340, 40));
+        subtitle.text = "Zorluk sec ve oyuna basla";
+        subtitle.fontSize = 18;
+        subtitle.alignment = TextAlignmentOptions.Center;
+        subtitle.color = new Color(0.82f, 0.86f, 0.95f);
+
         // Difficulty buttons
         CreateDifficultyButton(container.transform, "Kolay (9x9, 10 mayin)",
             new Vector2(0, -85), () => OnDifficultySelected(9, 9, 10));
@@ -114,6 +181,14 @@ public class GameUI : MonoBehaviour
             new Vector2(0, -150), () => OnDifficultySelected(16, 16, 40));
         CreateDifficultyButton(container.transform, "Zor (30x16, 99 mayin)",
             new Vector2(0, -215), () => OnDifficultySelected(30, 16, 99));
+
+        TextMeshProUGUI controlsSummary = CreateTMPText(container.transform, "ControlsSummary",
+            new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
+            new Vector2(0, 16), new Vector2(330, 46));
+        controlsSummary.text = "Sol tik: Ac  |  Sag tik: Bayrak\nKisayollar: B = Bot, R = Restart, H = Yardim";
+        controlsSummary.fontSize = 14;
+        controlsSummary.alignment = TextAlignmentOptions.Center;
+        controlsSummary.color = new Color(0.74f, 0.8f, 0.9f);
     }
 
     private void CreateDifficultyButton(Transform parent, string label, Vector2 pos,
@@ -135,6 +210,7 @@ public class GameUI : MonoBehaviour
         ColorBlock colors = btn.colors;
         colors.highlightedColor = new Color(0.4f, 0.55f, 0.8f);
         colors.pressedColor = new Color(0.2f, 0.35f, 0.6f);
+        colors.selectedColor = new Color(0.45f, 0.6f, 0.88f);
         btn.colors = colors;
         btn.onClick.AddListener(action);
 
@@ -143,6 +219,7 @@ public class GameUI : MonoBehaviour
             Vector2.zero, Vector2.zero);
         text.text = label;
         text.fontSize = 20;
+        text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
     }
@@ -175,7 +252,7 @@ public class GameUI : MonoBehaviour
         panelRect.anchorMax = new Vector2(1, 1);
         panelRect.pivot = new Vector2(0.5f, 1);
         panelRect.anchoredPosition = Vector2.zero;
-        panelRect.sizeDelta = new Vector2(0, 50);
+        panelRect.sizeDelta = new Vector2(0, 84);
 
         Image panelBg = topPanel.AddComponent<Image>();
         panelBg.color = new Color(0.18f, 0.18f, 0.22f, 0.95f);
@@ -260,6 +337,23 @@ public class GameUI : MonoBehaviour
         timerText.alignment = TextAlignmentOptions.Right;
         timerText.fontSize = 28;
         timerText.color = Color.white;
+
+        controlsHintText = CreateTMPText(topPanel.transform, "ControlsHint",
+            new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 1),
+            new Vector2(0, -4), new Vector2(550, 22));
+        controlsHintText.text = "Sol tik: Ac | Sag tik: Bayrak | B: Bot | R: Restart | H: Yardim";
+        controlsHintText.fontSize = 14;
+        controlsHintText.color = new Color(0.77f, 0.82f, 0.92f);
+        controlsHintText.alignment = TextAlignmentOptions.Center;
+
+        statusText = CreateTMPText(topPanel.transform, "StatusText",
+            new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 1),
+            new Vector2(0, -26), new Vector2(420, 22));
+        statusText.text = "Hazir";
+        statusText.fontSize = 15;
+        statusText.fontStyle = FontStyles.Bold;
+        statusText.color = new Color(0.85f, 0.9f, 1f);
+        statusText.alignment = TextAlignmentOptions.Center;
 
         topPanel.SetActive(false);
     }
