@@ -27,7 +27,9 @@ public class Board : MonoBehaviour
     private float timer = 0f;
 
     [SerializeField] private GameUI gameUI;
+    [SerializeField] private StatsManager statsManager;
     private Sprite cachedSprite;
+    private string currentDifficulty;
 
     public bool IsBotPlaying { get; set; }
 
@@ -105,11 +107,12 @@ public class Board : MonoBehaviour
         }
     }
 
-    public void InitializeBoard(int w, int h, int mines)
+    public void InitializeBoard(int w, int h, int mines, string difficulty)
     {
         width = w;
         height = h;
         mineCount = mines;
+        currentDifficulty = difficulty;
 
         boardInitialized = true;
         firstClickDone = false;
@@ -394,7 +397,9 @@ public class Board : MonoBehaviour
 
         gameState = GameState.Won;
         Debug.Log("You Win!");
-        gameUI.ShowEndGame(true);
+        int timeSeconds = Mathf.FloorToInt(timer);
+        bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
+        gameUI.ShowEndGame(true, timeSeconds, isNewRecord);
     }
 
     private void GameOver(int clickedX, int clickedY)
@@ -421,7 +426,9 @@ public class Board : MonoBehaviour
             }
         }
 
-        gameUI.ShowEndGame(false);
+        int timeSeconds = Mathf.FloorToInt(timer);
+        statsManager.RecordGame(currentDifficulty, false, timeSeconds);
+        gameUI.ShowEndGame(false, timeSeconds, false);
     }
 
     private void UpdateWrongFlagVisual(int x, int y)
@@ -633,6 +640,11 @@ public class Board : MonoBehaviour
     public int GetFlagCount()
     {
         return flagCount;
+    }
+
+    public string GetDifficulty()
+    {
+        return currentDifficulty;
     }
 
     public void BotRevealCell(int x, int y)
