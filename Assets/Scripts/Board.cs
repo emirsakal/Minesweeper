@@ -26,7 +26,7 @@ public class Board : MonoBehaviour
     private int flagCount = 0;
     private float timer = 0f;
 
-    private GameUI gameUI;
+    [SerializeField] private GameUI gameUI;
     private Sprite cachedSprite;
 
     public bool IsBotPlaying { get; set; }
@@ -66,7 +66,7 @@ public class Board : MonoBehaviour
     private void Awake()
     {
         SetCameraBackground();
-        CreateUI();
+        gameUI.Initialize(this);
     }
 
     private void Update()
@@ -103,13 +103,6 @@ public class Board : MonoBehaviour
         {
             cam.backgroundColor = new Color(0.2f, 0.2f, 0.25f);
         }
-    }
-
-    private void CreateUI()
-    {
-        GameObject uiGO = new GameObject("GameUI");
-        gameUI = uiGO.AddComponent<GameUI>();
-        gameUI.Initialize(this);
     }
 
     public void InitializeBoard(int w, int h, int mines)
