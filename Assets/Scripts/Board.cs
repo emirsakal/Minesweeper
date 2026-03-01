@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public enum GameState
 {
@@ -28,13 +30,11 @@ public class Board : MonoBehaviour
 
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
-    [SerializeField] private Transform playArea;
-    private Sprite cachedSprite;
+    [SerializeField] private RectTransform gridContainer;
     private string currentDifficulty;
 
     private float cellSize;
     private float cellScale;
-    private Vector3 gridOrigin;
 
     public bool IsBotPlaying { get; set; }
 
@@ -69,7 +69,6 @@ public class Board : MonoBehaviour
 
     private void Awake()
     {
-        SetCameraBackground();
         gameUI.Initialize(this);
     }
 
@@ -100,15 +99,6 @@ public class Board : MonoBehaviour
         }
     }
 
-    private void SetCameraBackground()
-    {
-        Camera cam = Camera.main;
-        if (cam != null)
-        {
-            cam.backgroundColor = new Color(0.2f, 0.2f, 0.25f);
-        }
-    }
-
     public void InitializeBoard(int w, int h, int mines, string difficulty)
     {
         width = w;
@@ -126,14 +116,29 @@ public class Board : MonoBehaviour
         CalculateGridLayout();
         GenerateBoard();
         DrawBoard();
-        FitCamera();
+    }
+
+    private void CalculateGridLayout()
+    {
+        float containerW = gridContainer.rect.width;
+        float containerH = gridContainer.rect.height;
+        cellSize = Mathf.Min(containerW / width, containerH / height);
+        cellScale = cellSize * 0.92f;
     }
 
     private Vector2Int? GetGridPosition()
     {
-        Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        int x = Mathf.RoundToInt((worldPos.x - gridOrigin.x) / cellSize);
-        int y = Mathf.RoundToInt((worldPos.y - gridOrigin.y) / cellSize);
+        Vector2 localPoint;
+        // null camera = Screen Space Overlay canvas
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            gridContainer, Input.mousePosition, null, out localPoint))
+            return null;
+
+        float totalW = width * cellSize;
+        float totalH = height * cellSize;
+
+        int x = Mathf.FloorToInt((localPoint.x + totalW * 0.5f) / cellSize);
+        int y = Mathf.FloorToInt((localPoint.y + totalH * 0.5f) / cellSize);
 
         if (x < 0 || x >= width || y < 0 || y >= height)
             return null;
@@ -350,10 +355,10 @@ public class Board : MonoBehaviour
         GameObject cellGO = cellObjects[x, y];
         float duration = 0.1f;
         float elapsed = 0f;
-        float startScale = cellScale * 0.55f;
-        float endScale = cellScale;
+        float startS = 0.55f;
+        float endS = 1f;
 
-        cellGO.transform.localScale = new Vector3(startScale, startScale, 1f);
+        cellGO.transform.localScale = new Vector3(startS, startS, 1f);
 
         while (elapsed < duration)
         {
@@ -361,12 +366,12 @@ public class Board : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
             // Ease-out: 1 - (1-t)^2
             t = 1f - (1f - t) * (1f - t);
-            float s = Mathf.Lerp(startScale, endScale, t);
+            float s = Mathf.Lerp(startS, endS, t);
             cellGO.transform.localScale = new Vector3(s, s, 1f);
             yield return null;
         }
 
-        cellGO.transform.localScale = new Vector3(endScale, endScale, 1f);
+        cellGO.transform.localScale = Vector3.one;
     }
 
     private void ToggleFlag(int x, int y)
@@ -437,36 +442,47 @@ public class Board : MonoBehaviour
     private void UpdateWrongFlagVisual(int x, int y)
     {
         GameObject cellGO = cellObjects[x, y];
-        SpriteRenderer sr = cellGO.GetComponent<SpriteRenderer>();
+        Image img = cellGO.GetComponent<Image>();
 
         foreach (Transform child in cellGO.transform)
         {
             Destroy(child.gameObject);
         }
 
-        sr.color = WrongFlagColor;
+        img.color = WrongFlagColor;
         AddBorder(cellGO);
         CreateTextOnCell(cellGO, "X", MineColor);
     }
 
+    // ========== UI GRID DRAWING ==========
+
     private void DrawBoard()
     {
         cellObjects = new GameObject[width, height];
+
+        float totalW = width * cellSize;
+        float totalH = height * cellSize;
+        float startX = -totalW * 0.5f + cellSize * 0.5f;
+        float startY = -totalH * 0.5f + cellSize * 0.5f;
 
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 GameObject cellGO = new GameObject($"Cell ({x}, {y})");
-                cellGO.transform.parent = transform;
-                cellGO.transform.position = new Vector3(
-                    gridOrigin.x + x * cellSize,
-                    gridOrigin.y + y * cellSize,
-                    0f);
-                cellGO.transform.localScale = new Vector3(cellScale, cellScale, 1f);
+                cellGO.transform.SetParent(gridContainer, false);
 
-                SpriteRenderer sr = cellGO.AddComponent<SpriteRenderer>();
-                sr.sprite = GetSprite();
+                RectTransform rt = cellGO.AddComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(cellScale, cellScale);
+                rt.anchoredPosition = new Vector2(
+                    startX + x * cellSize,
+                    startY + y * cellSize);
+
+                Image img = cellGO.AddComponent<Image>();
+                img.raycastTarget = false;
                 cellObjects[x, y] = cellGO;
 
                 UpdateCellVisual(x, y);
@@ -478,7 +494,7 @@ public class Board : MonoBehaviour
     {
         Cell cell = cells[x, y];
         GameObject cellGO = cellObjects[x, y];
-        SpriteRenderer sr = cellGO.GetComponent<SpriteRenderer>();
+        Image img = cellGO.GetComponent<Image>();
 
         // Clear existing child objects
         foreach (Transform child in cellGO.transform)
@@ -488,7 +504,7 @@ public class Board : MonoBehaviour
 
         if (!cell.isRevealed)
         {
-            sr.color = ClosedColor;
+            img.color = ClosedColor;
             AddBevel(cellGO);
 
             if (cell.isFlagged)
@@ -501,12 +517,12 @@ public class Board : MonoBehaviour
             if (cell.type == CellType.Mine)
             {
                 bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
-                sr.color = isExploded ? ExplodedMineColor : MineColor;
+                img.color = isExploded ? ExplodedMineColor : MineColor;
                 CreateTextOnCell(cellGO, "\u25CF", Color.black);
             }
             else
             {
-                sr.color = RevealedColor;
+                img.color = RevealedColor;
                 AddBorder(cellGO);
 
                 if (cell.type == CellType.Number && cell.number > 0)
@@ -519,114 +535,64 @@ public class Board : MonoBehaviour
 
     private void AddBevel(GameObject cellGO)
     {
-        float size = 0.08f;
-        float offset = 0.5f - size / 2f;
-        float innerLen = 1f - size * 2f;
+        float bevel = cellScale * 0.08f;
+        float offset = cellScale * 0.5f - bevel * 0.5f;
+        float innerLen = cellScale - bevel * 2f;
 
         // Top + Left = highlight
-        CreateEdge(cellGO, new Vector3(0, offset, 0), new Vector3(1, size, 1), BevelHighlight);
-        CreateEdge(cellGO, new Vector3(-offset, 0, 0), new Vector3(size, innerLen, 1), BevelHighlight);
+        CreateEdge(cellGO, new Vector2(0, offset), new Vector2(cellScale, bevel), BevelHighlight);
+        CreateEdge(cellGO, new Vector2(-offset, 0), new Vector2(bevel, innerLen), BevelHighlight);
         // Bottom + Right = shadow
-        CreateEdge(cellGO, new Vector3(0, -offset, 0), new Vector3(1, size, 1), BevelShadow);
-        CreateEdge(cellGO, new Vector3(offset, 0, 0), new Vector3(size, innerLen, 1), BevelShadow);
+        CreateEdge(cellGO, new Vector2(0, -offset), new Vector2(cellScale, bevel), BevelShadow);
+        CreateEdge(cellGO, new Vector2(offset, 0), new Vector2(bevel, innerLen), BevelShadow);
     }
 
     private void AddBorder(GameObject cellGO)
     {
-        float size = 0.03f;
-        float offset = 0.5f - size / 2f;
-        float innerLen = 1f - size * 2f;
+        float border = cellScale * 0.03f;
+        float offset = cellScale * 0.5f - border * 0.5f;
+        float innerLen = cellScale - border * 2f;
 
-        CreateEdge(cellGO, new Vector3(0, offset, 0), new Vector3(1, size, 1), RevealedBorder);
-        CreateEdge(cellGO, new Vector3(-offset, 0, 0), new Vector3(size, innerLen, 1), RevealedBorder);
-        CreateEdge(cellGO, new Vector3(0, -offset, 0), new Vector3(1, size, 1), RevealedBorder);
-        CreateEdge(cellGO, new Vector3(offset, 0, 0), new Vector3(size, innerLen, 1), RevealedBorder);
+        CreateEdge(cellGO, new Vector2(0, offset), new Vector2(cellScale, border), RevealedBorder);
+        CreateEdge(cellGO, new Vector2(-offset, 0), new Vector2(border, innerLen), RevealedBorder);
+        CreateEdge(cellGO, new Vector2(0, -offset), new Vector2(cellScale, border), RevealedBorder);
+        CreateEdge(cellGO, new Vector2(offset, 0), new Vector2(border, innerLen), RevealedBorder);
     }
 
-    private void CreateEdge(GameObject parent, Vector3 localPos, Vector3 localScale, Color color)
+    private void CreateEdge(GameObject parent, Vector2 anchoredPos, Vector2 sizeDelta, Color color)
     {
         GameObject edge = new GameObject("Edge");
         edge.transform.SetParent(parent.transform, false);
-        edge.transform.localPosition = localPos;
-        edge.transform.localScale = localScale;
 
-        SpriteRenderer sr = edge.AddComponent<SpriteRenderer>();
-        sr.sprite = GetSprite();
-        sr.color = color;
-        sr.sortingOrder = 1;
+        RectTransform rt = edge.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = sizeDelta;
+
+        Image img = edge.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
     }
 
     private void CreateTextOnCell(GameObject parent, string text, Color color)
     {
         GameObject textGO = new GameObject("Text");
-        textGO.transform.parent = parent.transform;
-        textGO.transform.localPosition = Vector3.zero;
+        textGO.transform.SetParent(parent.transform, false);
 
-        TextMesh textMesh = textGO.AddComponent<TextMesh>();
-        textMesh.text = text;
-        textMesh.characterSize = 0.2f;
-        textMesh.fontSize = 40;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
-        textMesh.color = color;
+        RectTransform rt = textGO.AddComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
 
-        MeshRenderer mr = textGO.GetComponent<MeshRenderer>();
-        mr.sortingOrder = 2;
-
-        textGO.transform.localScale = Vector3.one;
-    }
-
-    private Sprite GetSprite()
-    {
-        if (cachedSprite != null) return cachedSprite;
-
-        cachedSprite = Resources.Load<Sprite>("Sprites/Square");
-        if (cachedSprite == null)
-        {
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white);
-            tex.Apply();
-            cachedSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
-        }
-
-        return cachedSprite;
-    }
-
-    private void CalculateGridLayout()
-    {
-        Vector3 areaPos = playArea.position;
-        float areaWidth = playArea.localScale.x;
-        float areaHeight = playArea.localScale.y;
-
-        // Fit all cells inside the play area, preserving square cells
-        cellSize = Mathf.Min(areaWidth / width, areaHeight / height);
-        cellScale = cellSize * 0.9f;
-
-        // Grid origin = bottom-left cell center
-        float totalGridW = width * cellSize;
-        float totalGridH = height * cellSize;
-        gridOrigin = new Vector3(
-            areaPos.x - totalGridW * 0.5f + cellSize * 0.5f,
-            areaPos.y - totalGridH * 0.5f + cellSize * 0.5f,
-            0f);
-    }
-
-    private void FitCamera()
-    {
-        Camera cam = Camera.main;
-        if (cam == null) return;
-
-        cam.orthographic = true;
-
-        // Point camera at the play area center
-        Vector3 areaPos = playArea.position;
-        cam.transform.position = new Vector3(areaPos.x, areaPos.y, -10f);
-
-        // Size camera to show the entire play area
-        float areaHalfH = playArea.localScale.y * 0.5f;
-        float areaHalfW = playArea.localScale.x * 0.5f;
-        float screenAspect = (float)Screen.width / Screen.height;
-        cam.orthographicSize = Mathf.Max(areaHalfH, areaHalfW / screenAspect);
+        TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = cellScale * 0.55f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = color;
+        tmp.raycastTarget = false;
     }
 
     // ========== PUBLIC API FOR BOT ==========
@@ -695,8 +661,8 @@ public class Board : MonoBehaviour
     {
         if (cellObjects != null && x >= 0 && x < width && y >= 0 && y < height)
         {
-            SpriteRenderer sr = cellObjects[x, y].GetComponent<SpriteRenderer>();
-            sr.color = color;
+            Image img = cellObjects[x, y].GetComponent<Image>();
+            img.color = color;
         }
     }
 
