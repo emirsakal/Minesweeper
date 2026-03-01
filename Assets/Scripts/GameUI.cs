@@ -160,13 +160,13 @@ public class GameUI : MonoBehaviour
         if (!resetConfirmPending)
         {
             resetConfirmPending = true;
-            statsResetButtonText.text = "Emin misin?";
+            statsResetButtonText.text = "Are You Sure?";
         }
         else
         {
             statsManager.ResetStats(selectedStatsTab);
             resetConfirmPending = false;
-            statsResetButtonText.text = "Sifirla";
+            statsResetButtonText.text = "Reset Stats";
             RefreshStatsDisplay();
         }
     }
@@ -194,7 +194,7 @@ public class GameUI : MonoBehaviour
         }
 
         statsContentText.text = text;
-        statsResetButtonText.text = resetConfirmPending ? "Emin misin?" : "Sifirla";
+        statsResetButtonText.text = resetConfirmPending ? "Are You Sure?" : "Reset Stats";
     }
 
     private void UpdateTabColors()
