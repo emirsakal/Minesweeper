@@ -28,13 +28,15 @@ public class Board : MonoBehaviour
 
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
+    [SerializeField] private Transform playArea;
     private Sprite cachedSprite;
     private string currentDifficulty;
 
-    public bool IsBotPlaying { get; set; }
+    private float cellSize;
+    private float cellScale;
+    private Vector3 gridOrigin;
 
-    private const float CellSize = 1f;
-    private const float CellScale = 0.9f;
+    public bool IsBotPlaying { get; set; }
 
     // Cell colors
     private static readonly Color ClosedColor = new Color(0.78f, 0.78f, 0.82f);
@@ -121,16 +123,17 @@ public class Board : MonoBehaviour
         timer = 0f;
         IsBotPlaying = false;
 
+        CalculateGridLayout();
         GenerateBoard();
         DrawBoard();
-        CenterCamera();
+        FitCamera();
     }
 
     private Vector2Int? GetGridPosition()
     {
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        int x = Mathf.RoundToInt(worldPos.x / CellSize);
-        int y = Mathf.RoundToInt(worldPos.y / CellSize);
+        int x = Mathf.RoundToInt((worldPos.x - gridOrigin.x) / cellSize);
+        int y = Mathf.RoundToInt((worldPos.y - gridOrigin.y) / cellSize);
 
         if (x < 0 || x >= width || y < 0 || y >= height)
             return null;
@@ -347,8 +350,8 @@ public class Board : MonoBehaviour
         GameObject cellGO = cellObjects[x, y];
         float duration = 0.1f;
         float elapsed = 0f;
-        float startScale = 0.5f;
-        float endScale = CellScale;
+        float startScale = cellScale * 0.55f;
+        float endScale = cellScale;
 
         cellGO.transform.localScale = new Vector3(startScale, startScale, 1f);
 
@@ -456,8 +459,11 @@ public class Board : MonoBehaviour
             {
                 GameObject cellGO = new GameObject($"Cell ({x}, {y})");
                 cellGO.transform.parent = transform;
-                cellGO.transform.position = new Vector3(x * CellSize, y * CellSize, 0f);
-                cellGO.transform.localScale = new Vector3(CellScale, CellScale, 1f);
+                cellGO.transform.position = new Vector3(
+                    gridOrigin.x + x * cellSize,
+                    gridOrigin.y + y * cellSize,
+                    0f);
+                cellGO.transform.localScale = new Vector3(cellScale, cellScale, 1f);
 
                 SpriteRenderer sr = cellGO.AddComponent<SpriteRenderer>();
                 sr.sprite = GetSprite();
@@ -586,41 +592,41 @@ public class Board : MonoBehaviour
         return cachedSprite;
     }
 
-    private void CenterCamera()
+    private void CalculateGridLayout()
+    {
+        Vector3 areaPos = playArea.position;
+        float areaWidth = playArea.localScale.x;
+        float areaHeight = playArea.localScale.y;
+
+        // Fit all cells inside the play area, preserving square cells
+        cellSize = Mathf.Min(areaWidth / width, areaHeight / height);
+        cellScale = cellSize * 0.9f;
+
+        // Grid origin = bottom-left cell center
+        float totalGridW = width * cellSize;
+        float totalGridH = height * cellSize;
+        gridOrigin = new Vector3(
+            areaPos.x - totalGridW * 0.5f + cellSize * 0.5f,
+            areaPos.y - totalGridH * 0.5f + cellSize * 0.5f,
+            0f);
+    }
+
+    private void FitCamera()
     {
         Camera cam = Camera.main;
         if (cam == null) return;
 
         cam.orthographic = true;
+
+        // Point camera at the play area center
+        Vector3 areaPos = playArea.position;
+        cam.transform.position = new Vector3(areaPos.x, areaPos.y, -10f);
+
+        // Size camera to show the entire play area
+        float areaHalfH = playArea.localScale.y * 0.5f;
+        float areaHalfW = playArea.localScale.x * 0.5f;
         float screenAspect = (float)Screen.width / Screen.height;
-
-        // Grid bounds in world units (with padding)
-        float gridWidth = width * CellSize;
-        float gridHeight = height * CellSize;
-        float padSide = 1f;
-        float padBottom = 0.5f;
-
-        // Top panel is ~50px; reserve that space in world units
-        float panelPixels = 50f;
-
-        // Determine orthographic size from grid + side padding
-        float halfHeight = gridHeight * 0.5f + padBottom;
-        float halfWidth = gridWidth * 0.5f + padSide;
-        float sizeFromHeight = halfHeight;
-        float sizeFromWidth = halfWidth / screenAspect;
-        float orthoSize = Mathf.Max(sizeFromHeight, sizeFromWidth);
-
-        // Convert panel pixel height to world units and add to ortho size
-        float panelWorld = panelPixels / Screen.height * orthoSize * 2f;
-        orthoSize += panelWorld * 0.5f;
-
-        cam.orthographicSize = orthoSize;
-
-        // Center grid, then shift camera down so the panel gap is at top
-        float centerX = (width - 1) * CellSize * 0.5f;
-        float centerY = (height - 1) * CellSize * 0.5f;
-        float offsetY = panelWorld * 0.5f;
-        cam.transform.position = new Vector3(centerX, centerY - offsetY, -10f);
+        cam.orthographicSize = Mathf.Max(areaHalfH, areaHalfW / screenAspect);
     }
 
     // ========== PUBLIC API FOR BOT ==========
