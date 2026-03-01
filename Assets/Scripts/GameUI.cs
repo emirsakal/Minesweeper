@@ -36,6 +36,14 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Button statsHardTab;
     [SerializeField] private Button statsResetButton;
 
+    [Header("Stats Tab Sprites")]
+    [SerializeField] private Sprite easyTabActiveSprite;
+    [SerializeField] private Sprite easyTabInactiveSprite;
+    [SerializeField] private Sprite mediumTabActiveSprite;
+    [SerializeField] private Sprite mediumTabInactiveSprite;
+    [SerializeField] private Sprite hardTabActiveSprite;
+    [SerializeField] private Sprite hardTabInactiveSprite;
+
     [Header("Dependencies")]
     [SerializeField] private StatsManager statsManager;
 
@@ -46,8 +54,8 @@ public class GameUI : MonoBehaviour
     private bool resetConfirmPending;
     private TextMeshProUGUI statsResetButtonText;
 
-    private static readonly Color TabActiveColor = new Color(0.3f, 0.45f, 0.7f);
-    private static readonly Color TabInactiveColor = new Color(0.25f, 0.25f, 0.3f);
+    private static readonly Color TabActiveTextColor = Color.white;
+    private static readonly Color TabInactiveTextColor = new Color(0.6f, 0.6f, 0.6f);
 
     public void Initialize(Board board)
     {
@@ -173,7 +181,7 @@ public class GameUI : MonoBehaviour
 
     private void RefreshStatsDisplay()
     {
-        UpdateTabColors();
+        UpdateTabVisuals();
 
         DifficultyStats stats = statsManager.GetStats(selectedStatsTab);
         List<int> bestTimes = statsManager.GetBestTimes(selectedStatsTab);
@@ -197,14 +205,25 @@ public class GameUI : MonoBehaviour
         statsResetButtonText.text = resetConfirmPending ? "Are You Sure?" : "Reset Stats";
     }
 
-    private void UpdateTabColors()
+    private void UpdateTabVisuals()
     {
-        statsEasyTab.GetComponent<Image>().color =
-            selectedStatsTab == "Easy" ? TabActiveColor : TabInactiveColor;
-        statsMediumTab.GetComponent<Image>().color =
-            selectedStatsTab == "Medium" ? TabActiveColor : TabInactiveColor;
-        statsHardTab.GetComponent<Image>().color =
-            selectedStatsTab == "Hard" ? TabActiveColor : TabInactiveColor;
+        SetTabState(statsEasyTab, selectedStatsTab == "Easy",
+            easyTabActiveSprite, easyTabInactiveSprite);
+        SetTabState(statsMediumTab, selectedStatsTab == "Medium",
+            mediumTabActiveSprite, mediumTabInactiveSprite);
+        SetTabState(statsHardTab, selectedStatsTab == "Hard",
+            hardTabActiveSprite, hardTabInactiveSprite);
+    }
+
+    private void SetTabState(Button tab, bool active, Sprite activeSprite, Sprite inactiveSprite)
+    {
+        Image img = tab.GetComponent<Image>();
+        img.sprite = active ? activeSprite : inactiveSprite;
+        img.color = Color.white;
+
+        TextMeshProUGUI label = tab.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+            label.color = active ? TabActiveTextColor : TabInactiveTextColor;
     }
 
     // ========== PUBLIC API ==========
