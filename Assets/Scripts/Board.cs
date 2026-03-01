@@ -31,6 +31,12 @@ public class Board : MonoBehaviour
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
     [SerializeField] private RectTransform gridContainer;
+
+    [Header("Cell Visuals")]
+    [SerializeField] private TMP_FontAsset cellFont;
+    [SerializeField] private Sprite flagSprite;
+    [SerializeField] private Sprite mineSprite;
+
     private string currentDifficulty;
 
     private float cellSize;
@@ -509,7 +515,10 @@ public class Board : MonoBehaviour
 
             if (cell.isFlagged)
             {
-                CreateTextOnCell(cellGO, "\u25B6", FlagColor);
+                if (flagSprite != null)
+                    CreateImageOnCell(cellGO, flagSprite, FlagColor);
+                else
+                    CreateTextOnCell(cellGO, "\u2691", FlagColor);
             }
         }
         else
@@ -518,7 +527,10 @@ public class Board : MonoBehaviour
             {
                 bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
                 img.color = isExploded ? ExplodedMineColor : MineColor;
-                CreateTextOnCell(cellGO, "\u25CF", Color.black);
+                if (mineSprite != null)
+                    CreateImageOnCell(cellGO, mineSprite, Color.black);
+                else
+                    CreateTextOnCell(cellGO, "\u25CF", Color.black);
             }
             else
             {
@@ -593,6 +605,27 @@ public class Board : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = color;
         tmp.raycastTarget = false;
+        if (cellFont != null) tmp.font = cellFont;
+    }
+
+    private void CreateImageOnCell(GameObject parent, Sprite sprite, Color tintColor)
+    {
+        GameObject imgGO = new GameObject("Icon");
+        imgGO.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = imgGO.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        float iconSize = cellScale * 0.65f;
+        rt.sizeDelta = new Vector2(iconSize, iconSize);
+        rt.anchoredPosition = Vector2.zero;
+
+        Image img = imgGO.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = tintColor;
+        img.raycastTarget = false;
+        img.preserveAspect = true;
     }
 
     // ========== PUBLIC API FOR BOT ==========
