@@ -591,18 +591,36 @@ public class Board : MonoBehaviour
         Camera cam = Camera.main;
         if (cam == null) return;
 
+        cam.orthographic = true;
+        float screenAspect = (float)Screen.width / Screen.height;
+
+        // Grid bounds in world units (with padding)
+        float gridWidth = width * CellSize;
+        float gridHeight = height * CellSize;
+        float padSide = 1f;
+        float padBottom = 0.5f;
+
+        // Top panel is ~50px; reserve that space in world units
+        float panelPixels = 50f;
+
+        // Determine orthographic size from grid + side padding
+        float halfHeight = gridHeight * 0.5f + padBottom;
+        float halfWidth = gridWidth * 0.5f + padSide;
+        float sizeFromHeight = halfHeight;
+        float sizeFromWidth = halfWidth / screenAspect;
+        float orthoSize = Mathf.Max(sizeFromHeight, sizeFromWidth);
+
+        // Convert panel pixel height to world units and add to ortho size
+        float panelWorld = panelPixels / Screen.height * orthoSize * 2f;
+        orthoSize += panelWorld * 0.5f;
+
+        cam.orthographicSize = orthoSize;
+
+        // Center grid, then shift camera down so the panel gap is at top
         float centerX = (width - 1) * CellSize * 0.5f;
         float centerY = (height - 1) * CellSize * 0.5f;
-        cam.transform.position = new Vector3(centerX, centerY, -10f);
-
-        cam.orthographic = true;
-
-        float halfHeight = height * CellSize * 0.5f + 1.5f;
-        float halfWidth = width * CellSize * 0.5f + 1f;
-        float screenAspect = (float)Screen.width / Screen.height;
-        float requiredSize = Mathf.Max(halfHeight, halfWidth / screenAspect);
-
-        cam.orthographicSize = requiredSize;
+        float offsetY = panelWorld * 0.5f;
+        cam.transform.position = new Vector3(centerX, centerY - offsetY, -10f);
     }
 
     // ========== PUBLIC API FOR BOT ==========
