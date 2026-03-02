@@ -42,6 +42,11 @@ public class Board : MonoBehaviour
     [SerializeField] private Sprite revealedTileSprite;
     [SerializeField] private Sprite revealedEmptySprite;
 
+    [Header("Grid Background")]
+    [SerializeField] private Sprite gridBackgroundSprite;
+
+    private GameObject gridBackground;
+
     private string currentDifficulty;
 
     private float cellSize;
@@ -477,12 +482,99 @@ public class Board : MonoBehaviour
 
     // ========== UI GRID DRAWING ==========
 
+    private void CreateGridBackground(float totalW, float totalH)
+    {
+        if (gridBackground != null)
+            Destroy(gridBackground);
+
+        float padding = cellSize * 0.3f;
+        float bgW = totalW + padding * 2f;
+        float bgH = totalH + padding * 2f;
+
+        gridBackground = new GameObject("GridBackground");
+        gridBackground.transform.SetParent(gridContainer, false);
+
+        RectTransform rt = gridBackground.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(bgW, bgH);
+        rt.anchoredPosition = Vector2.zero;
+
+        Image img = gridBackground.AddComponent<Image>();
+        img.raycastTarget = false;
+
+        if (gridBackgroundSprite != null)
+        {
+            img.sprite = gridBackgroundSprite;
+            img.type = Image.Type.Sliced;
+            img.color = Color.white;
+        }
+        else
+        {
+            img.color = new Color(0.18f, 0.18f, 0.22f);
+            float borderWidth = cellSize * 0.12f;
+            CreateInsetBorder(gridBackground, bgW, bgH, borderWidth);
+        }
+
+        gridBackground.transform.SetAsFirstSibling();
+    }
+
+    private void CreateInsetBorder(GameObject parent, float bgW, float bgH, float borderWidth)
+    {
+        // Top edge (dark - shadow)
+        CreateEdgePanel(parent, "TopShadow",
+            new Vector2(0, 1), new Vector2(1, 1),
+            new Vector2(0, -borderWidth * 0.5f), new Vector2(0, borderWidth),
+            new Color(0.1f, 0.1f, 0.14f));
+
+        // Left edge (dark - shadow)
+        CreateEdgePanel(parent, "LeftShadow",
+            new Vector2(0, 0), new Vector2(0, 1),
+            new Vector2(borderWidth * 0.5f, 0), new Vector2(borderWidth, 0),
+            new Color(0.12f, 0.12f, 0.16f));
+
+        // Bottom edge (light - highlight)
+        CreateEdgePanel(parent, "BottomLight",
+            new Vector2(0, 0), new Vector2(1, 0),
+            new Vector2(0, borderWidth * 0.5f), new Vector2(0, borderWidth),
+            new Color(0.28f, 0.28f, 0.32f));
+
+        // Right edge (light - highlight)
+        CreateEdgePanel(parent, "RightLight",
+            new Vector2(1, 0), new Vector2(1, 1),
+            new Vector2(-borderWidth * 0.5f, 0), new Vector2(borderWidth, 0),
+            new Color(0.26f, 0.26f, 0.30f));
+    }
+
+    private void CreateEdgePanel(GameObject parent, string name,
+        Vector2 anchorMin, Vector2 anchorMax,
+        Vector2 anchoredPos, Vector2 sizeDelta, Color color)
+    {
+        GameObject edge = new GameObject(name);
+        edge.transform.SetParent(parent.transform, false);
+
+        RectTransform rt = edge.AddComponent<RectTransform>();
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = sizeDelta;
+
+        Image img = edge.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+    }
+
     private void DrawBoard()
     {
         cellObjects = new GameObject[width, height];
 
         float totalW = width * cellSize;
         float totalH = height * cellSize;
+
+        CreateGridBackground(totalW, totalH);
+
         float startX = -totalW * 0.5f + cellSize * 0.5f;
         float startY = -totalH * 0.5f + cellSize * 0.5f;
 
