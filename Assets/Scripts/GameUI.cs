@@ -196,7 +196,7 @@ public class GameUI : MonoBehaviour
         for (int i = 0; i < 5; i++)
         {
             if (i < bestTimes.Count)
-                text += $"{i + 1}. {bestTimes[i]:D3} sn\n";
+                text += $"{i + 1}. {FormatTime(bestTimes[i])}\n";
             else
                 text += $"{i + 1}. ---\n";
         }
@@ -233,9 +233,16 @@ public class GameUI : MonoBehaviour
         mineCounterText.text = remaining.ToString("D2");
     }
 
-    public void UpdateTimer(int seconds)
+    public void UpdateTimer(int totalSeconds)
     {
-        timerText.text = Mathf.Min(seconds, 999).ToString("D3");
+        timerText.text = FormatTime(totalSeconds);
+    }
+
+    private string FormatTime(int totalSeconds)
+    {
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        return minutes + ":" + seconds.ToString("D2");
     }
 
     public void UpdateFace(GameState state)
@@ -289,7 +296,7 @@ public class GameUI : MonoBehaviour
 
             if (won)
             {
-                statsText = $"Sure: {timeSeconds:D3} sn";
+                statsText = $"Sure: {FormatTime(timeSeconds)}";
                 if (isNewRecord)
                     statsText += "  <color=#FFD700>Yeni Rekor!</color>";
                 statsText += "\n";
