@@ -37,6 +37,11 @@ public class Board : MonoBehaviour
     [SerializeField] private Sprite flagSprite;
     [SerializeField] private Sprite mineSprite;
 
+    [Header("Tile Sprites")]
+    [SerializeField] private Sprite closedTileSprite;
+    [SerializeField] private Sprite revealedTileSprite;
+    [SerializeField] private Sprite revealedEmptySprite;
+
     private string currentDifficulty;
 
     private float cellSize;
@@ -455,8 +460,18 @@ public class Board : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        img.color = WrongFlagColor;
-        AddBorder(cellGO);
+        if (revealedTileSprite != null)
+        {
+            img.sprite = revealedTileSprite;
+            img.type = Image.Type.Sliced;
+            img.color = Color.white;
+        }
+        else
+        {
+            img.sprite = null;
+            img.color = WrongFlagColor;
+            AddBorder(cellGO);
+        }
         CreateTextOnCell(cellGO, "X", MineColor);
     }
 
@@ -489,6 +504,12 @@ public class Board : MonoBehaviour
 
                 Image img = cellGO.AddComponent<Image>();
                 img.raycastTarget = false;
+                if (closedTileSprite != null)
+                {
+                    img.sprite = closedTileSprite;
+                    img.type = Image.Type.Sliced;
+                    img.color = Color.white;
+                }
                 cellObjects[x, y] = cellGO;
 
                 UpdateCellVisual(x, y);
@@ -510,8 +531,19 @@ public class Board : MonoBehaviour
 
         if (!cell.isRevealed)
         {
-            img.color = ClosedColor;
-            AddBevel(cellGO);
+            // Closed cell
+            if (closedTileSprite != null)
+            {
+                img.sprite = closedTileSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.sprite = null;
+                img.color = ClosedColor;
+                AddBevel(cellGO);
+            }
 
             if (cell.isFlagged)
             {
@@ -525,8 +557,19 @@ public class Board : MonoBehaviour
         {
             if (cell.type == CellType.Mine)
             {
+                // Mine cell
                 bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
-                img.color = isExploded ? ExplodedMineColor : MineColor;
+                if (revealedTileSprite != null)
+                {
+                    img.sprite = revealedTileSprite;
+                    img.type = Image.Type.Sliced;
+                    img.color = isExploded ? ExplodedMineColor : MineColor;
+                }
+                else
+                {
+                    img.sprite = null;
+                    img.color = isExploded ? ExplodedMineColor : MineColor;
+                }
                 if (mineSprite != null)
                     CreateImageOnCell(cellGO, mineSprite, Color.white);
                 else
@@ -534,8 +577,27 @@ public class Board : MonoBehaviour
             }
             else
             {
-                img.color = RevealedColor;
-                AddBorder(cellGO);
+                // Revealed safe cell
+                bool isEmpty = cell.type == CellType.Empty || (cell.type == CellType.Number && cell.number == 0);
+
+                if (isEmpty && revealedEmptySprite != null)
+                {
+                    img.sprite = revealedEmptySprite;
+                    img.type = Image.Type.Sliced;
+                    img.color = Color.white;
+                }
+                else if (revealedTileSprite != null)
+                {
+                    img.sprite = revealedTileSprite;
+                    img.type = Image.Type.Sliced;
+                    img.color = Color.white;
+                }
+                else
+                {
+                    img.sprite = null;
+                    img.color = RevealedColor;
+                    AddBorder(cellGO);
+                }
 
                 if (cell.type == CellType.Number && cell.number > 0)
                 {
@@ -695,7 +757,15 @@ public class Board : MonoBehaviour
         if (cellObjects != null && x >= 0 && x < width && y >= 0 && y < height)
         {
             Image img = cellObjects[x, y].GetComponent<Image>();
-            img.color = color;
+            if (closedTileSprite != null && img.sprite != null)
+            {
+                // Sprite mode: apply tint
+                img.color = color;
+            }
+            else
+            {
+                img.color = color;
+            }
         }
     }
 
