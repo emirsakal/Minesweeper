@@ -58,7 +58,7 @@ public class Board : MonoBehaviour
     // Border for revealed cells
     private static readonly Color RevealedBorder = new Color(0.4f, 0.4f, 0.4f);
 
-    private static readonly Color FlagColor = new Color(0.9f, 0.1f, 0.1f);
+    private static readonly Color FlagColor = Color.white;
 
     private static readonly Color[] NumberColors = new Color[]
     {
@@ -528,7 +528,7 @@ public class Board : MonoBehaviour
                 bool isExploded = (x == explodedMinePos.x && y == explodedMinePos.y);
                 img.color = isExploded ? ExplodedMineColor : MineColor;
                 if (mineSprite != null)
-                    CreateImageOnCell(cellGO, mineSprite, Color.black);
+                    CreateImageOnCell(cellGO, mineSprite, Color.white);
                 else
                     CreateTextOnCell(cellGO, "\u25CF", Color.black);
             }
