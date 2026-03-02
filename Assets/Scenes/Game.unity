@@ -153,9 +153,9 @@ RectTransform:
   - {fileID: 822538850}
   m_Father: {fileID: 1626417169}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1374.2, y: -136.22}
   m_SizeDelta: {x: 320, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &49178950
@@ -817,7 +817,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &420723044
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1033,9 +1033,9 @@ RectTransform:
   - {fileID: 1000446814}
   m_Father: {fileID: 1626417169}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1059.2, y: -136.22}
   m_SizeDelta: {x: 320, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &553363599
@@ -1802,6 +1802,9 @@ MonoBehaviour:
   gameUI: {fileID: 1210053911}
   statsManager: {fileID: 1702882913}
   gridContainer: {fileID: 717254096}
+  cellFont: {fileID: 11400000, guid: 2a389b1e479f24a48b97d22872cc108e, type: 2}
+  flagSprite: {fileID: -8068744480555647865, guid: 2879969912fc187479b79e2ec689621c, type: 3}
+  mineSprite: {fileID: -5604722035873333280, guid: ecd6196791c6cc84792a615938467b18, type: 3}
 --- !u!4 &658781370
 Transform:
   m_ObjectHideFlags: 0
@@ -2777,9 +2780,9 @@ RectTransform:
   - {fileID: 207615775}
   m_Father: {fileID: 151049404}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 884.19995, y: -90}
   m_SizeDelta: {x: 200, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1008033520
@@ -2997,7 +3000,32 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Toplam Oyun: 0'
+  m_text: 'Toplam Oyun: 0
+
+    Kazanilan: 0
+
+    Kazanma Orani: %0
+
+    Mevcut Seri:
+    0
+
+    En Iyi Seri: 0
+
+
+    En Iyi Sureler:
+
+    1. ---
+
+    2. ---
+
+    3. ---
+
+    4.
+    ---
+
+    5. ---
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 2a389b1e479f24a48b97d22872cc108e, type: 2}
   m_sharedMaterial: {fileID: 4284500164911019297, guid: 2a389b1e479f24a48b97d22872cc108e, type: 2}
@@ -3024,7 +3052,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 72
+  m_fontSize: 27.9
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3062,7 +3090,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 310, y: 100, z: 55, w: 100}
+  m_margin: {x: 300, y: 100, z: 55, w: 100}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -3532,9 +3560,9 @@ RectTransform:
   - {fileID: 652788490}
   m_Father: {fileID: 1626417169}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 744.19995, y: -136.22}
   m_SizeDelta: {x: 320, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1463630555
@@ -3789,9 +3817,9 @@ RectTransform:
   - {fileID: 1109608588}
   m_Father: {fileID: 151049404}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1234.2, y: -90}
   m_SizeDelta: {x: 200, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1498617655
@@ -5166,6 +5194,7 @@ GameObject:
   - component: {fileID: 2077564745}
   - component: {fileID: 2077564744}
   - component: {fileID: 2077564743}
+  - component: {fileID: 2077564746}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -5247,6 +5276,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2077564746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2077564742}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &2101462116
 GameObject:
   m_ObjectHideFlags: 0
