@@ -49,6 +49,8 @@ public class Board : MonoBehaviour
 
     private Coroutine shakeCoroutine;
 
+    private GameObject confettiContainer;
+
     private string currentDifficulty;
 
     private float cellSize;
@@ -128,6 +130,13 @@ public class Board : MonoBehaviour
         {
             StopCoroutine(shakeCoroutine);
             shakeCoroutine = null;
+        }
+
+        if (confettiContainer != null)
+        {
+            StopAllCoroutines();
+            Destroy(confettiContainer);
+            confettiContainer = null;
         }
 
         boardInitialized = true;
@@ -429,6 +438,7 @@ public class Board : MonoBehaviour
 
         gameState = GameState.Won;
         Debug.Log("You Win!");
+        StartCoroutine(SpawnConfetti());
         int timeSeconds = Mathf.FloorToInt(timer);
         bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
         gameUI.ShowEndGame(true, timeSeconds, isNewRecord);
@@ -486,6 +496,111 @@ public class Board : MonoBehaviour
 
         gridContainer.anchoredPosition = originalPos;
         shakeCoroutine = null;
+    }
+
+    private IEnumerator SpawnConfetti()
+    {
+        Canvas canvas = gridContainer.GetComponentInParent<Canvas>();
+        RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+
+        if (confettiContainer != null)
+            Destroy(confettiContainer);
+
+        confettiContainer = new GameObject("ConfettiContainer");
+        confettiContainer.transform.SetParent(canvasRect, false);
+        RectTransform containerRect = confettiContainer.AddComponent<RectTransform>();
+        containerRect.anchorMin = Vector2.zero;
+        containerRect.anchorMax = Vector2.one;
+        containerRect.offsetMin = Vector2.zero;
+        containerRect.offsetMax = Vector2.zero;
+
+        confettiContainer.transform.SetAsLastSibling();
+
+        for (int wave = 0; wave < 3; wave++)
+        {
+            for (int i = 0; i < 22; i++)
+            {
+                CreateConfettiPiece(confettiContainer.transform, canvasRect);
+            }
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        yield return new WaitForSeconds(3f);
+        if (confettiContainer != null)
+        {
+            Destroy(confettiContainer);
+            confettiContainer = null;
+        }
+    }
+
+    private void CreateConfettiPiece(Transform parent, RectTransform canvasRect)
+    {
+        GameObject piece = new GameObject("Confetti");
+        piece.transform.SetParent(parent, false);
+
+        RectTransform rect = piece.AddComponent<RectTransform>();
+        float canvasWidth = canvasRect.rect.width;
+        float canvasHeight = canvasRect.rect.height;
+        float startX = Random.Range(-canvasWidth / 2f, canvasWidth / 2f);
+        float startY = canvasHeight / 2f + 20f;
+        rect.anchoredPosition = new Vector2(startX, startY);
+
+        float size = Random.Range(8f, 16f);
+        float widthRatio = Random.Range(0.5f, 1.5f);
+        rect.sizeDelta = new Vector2(size * widthRatio, size);
+        rect.rotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
+
+        Image img = piece.AddComponent<Image>();
+        img.raycastTarget = false;
+
+        Color[] confettiColors = new Color[]
+        {
+            new Color(1f, 0.2f, 0.2f),
+            new Color(0.2f, 0.8f, 0.2f),
+            new Color(0.2f, 0.4f, 1f),
+            new Color(1f, 0.8f, 0.1f),
+            new Color(1f, 0.4f, 0.8f),
+            new Color(0.6f, 0.2f, 1f),
+            new Color(1f, 0.5f, 0.1f),
+            new Color(0.2f, 0.9f, 0.9f),
+        };
+        img.color = confettiColors[Random.Range(0, confettiColors.Length)];
+
+        StartCoroutine(AnimateConfettiPiece(rect, img, canvasHeight));
+    }
+
+    private IEnumerator AnimateConfettiPiece(RectTransform rect, Image img, float canvasHeight)
+    {
+        float fallSpeed = Random.Range(150f, 350f);
+        float swayAmount = Random.Range(30f, 80f);
+        float swaySpeed = Random.Range(2f, 5f);
+        float rotateSpeed = Random.Range(90f, 360f);
+        float startX = rect.anchoredPosition.x;
+        float elapsed = 0f;
+        float fadeStartTime = 2f;
+
+        while (rect != null && rect.anchoredPosition.y > -canvasHeight / 2f - 50f)
+        {
+            elapsed += Time.deltaTime;
+
+            float newY = rect.anchoredPosition.y - fallSpeed * Time.deltaTime;
+            float newX = startX + Mathf.Sin(elapsed * swaySpeed) * swayAmount;
+            rect.anchoredPosition = new Vector2(newX, newY);
+
+            rect.Rotate(0, 0, rotateSpeed * Time.deltaTime);
+
+            if (elapsed > fadeStartTime && img != null)
+            {
+                Color c = img.color;
+                c.a = Mathf.Lerp(1f, 0f, (elapsed - fadeStartTime) / 1.5f);
+                img.color = c;
+            }
+
+            yield return null;
+        }
+
+        if (rect != null)
+            Destroy(rect.gameObject);
     }
 
     private void UpdateWrongFlagVisual(int x, int y)
