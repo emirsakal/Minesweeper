@@ -47,6 +47,8 @@ public class Board : MonoBehaviour
 
     private GameObject gridBackground;
 
+    private Coroutine shakeCoroutine;
+
     private string currentDifficulty;
 
     private float cellSize;
@@ -121,6 +123,12 @@ public class Board : MonoBehaviour
         height = h;
         mineCount = mines;
         currentDifficulty = difficulty;
+
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+            shakeCoroutine = null;
+        }
 
         boardInitialized = true;
         firstClickDone = false;
@@ -432,6 +440,8 @@ public class Board : MonoBehaviour
         explodedMinePos = new Vector2Int(clickedX, clickedY);
         Debug.Log("Game Over!");
 
+        shakeCoroutine = StartCoroutine(ShakeEffect());
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -453,6 +463,29 @@ public class Board : MonoBehaviour
         int timeSeconds = Mathf.FloorToInt(timer);
         statsManager.RecordGame(currentDifficulty, false, timeSeconds);
         gameUI.ShowEndGame(false, timeSeconds, false);
+    }
+
+    private IEnumerator ShakeEffect()
+    {
+        Vector2 originalPos = gridContainer.anchoredPosition;
+        float duration = 0.5f;
+        float magnitude = 8f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            float x = Random.Range(-1f, 1f) * magnitude;
+            float y = Random.Range(-1f, 1f) * magnitude;
+            gridContainer.anchoredPosition = originalPos + new Vector2(x, y);
+
+            elapsed += Time.deltaTime;
+            magnitude = Mathf.Lerp(8f, 0f, elapsed / duration);
+
+            yield return null;
+        }
+
+        gridContainer.anchoredPosition = originalPos;
+        shakeCoroutine = null;
     }
 
     private void UpdateWrongFlagVisual(int x, int y)
