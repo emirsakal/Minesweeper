@@ -54,6 +54,13 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Slider sfxVolumeSlider;
     [SerializeField] private Toggle sfxToggle;
 
+    [Header("Flag Mode")]
+    [SerializeField] private Button flagModeButton;
+    [SerializeField] private Image flagModeIcon;
+    [SerializeField] private Sprite flagModeOnSprite;
+    [SerializeField] private Sprite flagModeOffSprite;
+    [SerializeField] private TextMeshProUGUI flagModeText;
+
     [Header("Dependencies")]
     [SerializeField] private StatsManager statsManager;
 
@@ -87,6 +94,7 @@ public class GameUI : MonoBehaviour
         AddClickSound(statsEasyTab);
         AddClickSound(statsMediumTab);
         AddClickSound(statsHardTab);
+        AddClickSound(flagModeButton);
 
         // Difficulty buttons
         easyButton.onClick.AddListener(() => OnDifficultySelected(9, 9, 10, "Easy"));
@@ -97,6 +105,7 @@ public class GameUI : MonoBehaviour
         restartButton.onClick.AddListener(OnRestartClicked);
         endRestartButton.onClick.AddListener(OnRestartClicked);
         botButton.onClick.AddListener(OnBotClicked);
+        if (flagModeButton != null) flagModeButton.onClick.AddListener(OnFlagModeToggle);
 
         // Stats buttons
         statsButton.onClick.AddListener(OnStatsClicked);
@@ -147,6 +156,10 @@ public class GameUI : MonoBehaviour
         UpdateFace(GameState.Playing);
         board.InitializeBoard(w, h, mines, difficulty);
 
+        // Reset flag mode
+        board.SetFlagMode(false);
+        UpdateFlagModeVisual();
+
         // Create bot
         if (bot == null)
         {
@@ -173,6 +186,48 @@ public class GameUI : MonoBehaviour
             bot.StartBot();
             botButtonText.text = "Dur";
             botButtonText.color = new Color(1f, 0.8f, 0.3f);
+        }
+    }
+
+    // ========== FLAG MODE ==========
+
+    private void OnFlagModeToggle()
+    {
+        if (board == null) return;
+        bool newMode = !board.GetFlagMode();
+        board.SetFlagMode(newMode);
+        UpdateFlagModeVisual();
+    }
+
+    private void UpdateFlagModeVisual()
+    {
+        if (flagModeButton == null) return;
+
+        bool isFlag = board != null && board.GetFlagMode();
+
+        // Icon sprite mode
+        if (flagModeIcon != null)
+        {
+            if (isFlag && flagModeOnSprite != null)
+                flagModeIcon.sprite = flagModeOnSprite;
+            else if (!isFlag && flagModeOffSprite != null)
+                flagModeIcon.sprite = flagModeOffSprite;
+        }
+
+        // Text fallback mode
+        if (flagModeText != null)
+        {
+            flagModeText.text = isFlag ? "\u2691" : "\u270B";
+            flagModeText.color = isFlag ? Color.red : Color.white;
+        }
+
+        // Button background tint
+        Image btnImg = flagModeButton.GetComponent<Image>();
+        if (btnImg != null)
+        {
+            btnImg.color = isFlag
+                ? new Color(0.9f, 0.3f, 0.3f)
+                : new Color(0.3f, 0.3f, 0.3f);
         }
     }
 

@@ -27,6 +27,7 @@ public class Board : MonoBehaviour
     private Vector2Int explodedMinePos;
     private int flagCount = 0;
     private float timer = 0f;
+    private bool flagMode = false;
 
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
@@ -116,7 +117,12 @@ public class Board : MonoBehaviour
         {
             Vector2Int? gridPos = GetGridPosition();
             if (gridPos.HasValue)
-                HandleLeftClick(gridPos.Value);
+            {
+                if (flagMode)
+                    ToggleFlag(gridPos.Value.x, gridPos.Value.y);
+                else
+                    HandleLeftClick(gridPos.Value);
+            }
         }
         else if (Input.GetMouseButtonDown(1))
         {
@@ -151,6 +157,7 @@ public class Board : MonoBehaviour
         gameState = GameState.Playing;
         flagCount = 0;
         timer = 0f;
+        flagMode = false;
         IsBotPlaying = false;
 
         CalculateGridLayout();
@@ -966,6 +973,18 @@ public class Board : MonoBehaviour
         img.color = tintColor;
         img.raycastTarget = false;
         img.preserveAspect = true;
+    }
+
+    // ========== FLAG MODE ==========
+
+    public void SetFlagMode(bool value)
+    {
+        flagMode = value;
+    }
+
+    public bool GetFlagMode()
+    {
+        return flagMode;
     }
 
     // ========== PUBLIC API FOR BOT ==========
