@@ -44,6 +44,16 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Sprite hardTabActiveSprite;
     [SerializeField] private Sprite hardTabInactiveSprite;
 
+    [Header("Settings Panel")]
+    [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private Button settingsButton;
+    [SerializeField] private Button gameSettingsButton;
+    [SerializeField] private Button settingsBackButton;
+    [SerializeField] private Slider musicVolumeSlider;
+    [SerializeField] private Toggle musicToggle;
+    [SerializeField] private Slider sfxVolumeSlider;
+    [SerializeField] private Toggle sfxToggle;
+
     [Header("Dependencies")]
     [SerializeField] private StatsManager statsManager;
 
@@ -80,11 +90,21 @@ public class GameUI : MonoBehaviour
         statsResetButton.onClick.AddListener(OnStatsResetClicked);
         statsResetButtonText = statsResetButton.GetComponentInChildren<TextMeshProUGUI>();
 
+        // Settings buttons
+        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
+        if (gameSettingsButton != null) gameSettingsButton.onClick.AddListener(OpenSettings);
+        if (settingsBackButton != null) settingsBackButton.onClick.AddListener(CloseSettings);
+        if (musicVolumeSlider != null) musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
+        if (sfxVolumeSlider != null) sfxVolumeSlider.onValueChanged.AddListener(OnSfxVolumeChanged);
+        if (musicToggle != null) musicToggle.onValueChanged.AddListener(OnMusicToggled);
+        if (sfxToggle != null) sfxToggle.onValueChanged.AddListener(OnSfxToggled);
+
         // Initial state
         menuPanel.SetActive(true);
         topPanel.SetActive(false);
         endGamePanel.SetActive(false);
         statsPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
     }
 
     private void Update()
@@ -224,6 +244,48 @@ public class GameUI : MonoBehaviour
         TextMeshProUGUI label = tab.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
             label.color = active ? TabActiveTextColor : TabInactiveTextColor;
+    }
+
+    // ========== SETTINGS ==========
+
+    private void OpenSettings()
+    {
+        if (settingsPanel == null) return;
+        settingsPanel.SetActive(true);
+
+        var sm = SoundManager.Instance;
+        if (sm != null)
+        {
+            if (musicVolumeSlider != null) musicVolumeSlider.SetValueWithoutNotify(sm.GetMusicVolume());
+            if (sfxVolumeSlider != null) sfxVolumeSlider.SetValueWithoutNotify(sm.GetSfxVolume());
+            if (musicToggle != null) musicToggle.SetIsOnWithoutNotify(sm.IsMusicEnabled());
+            if (sfxToggle != null) sfxToggle.SetIsOnWithoutNotify(sm.IsSfxEnabled());
+        }
+    }
+
+    private void CloseSettings()
+    {
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+    }
+
+    private void OnMusicVolumeChanged(float value)
+    {
+        SoundManager.Instance?.SetMusicUserVolume(value);
+    }
+
+    private void OnSfxVolumeChanged(float value)
+    {
+        SoundManager.Instance?.SetSfxUserVolume(value);
+    }
+
+    private void OnMusicToggled(bool isOn)
+    {
+        SoundManager.Instance?.SetMusicEnabled(isOn);
+    }
+
+    private void OnSfxToggled(bool isOn)
+    {
+        SoundManager.Instance?.SetSfxEnabled(isOn);
     }
 
     // ========== PUBLIC API ==========

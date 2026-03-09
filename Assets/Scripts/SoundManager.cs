@@ -19,21 +19,36 @@ public class SoundManager : MonoBehaviour
     private AudioClip ambientClip;
 
     private Coroutine musicFadeCoroutine;
-    private float musicTargetVolume = 0.15f;
+
+    // User settings (0-1, from slider)
+    private float userMusicVolume = 1f;
+    private float userSfxVolume = 1f;
     private bool musicEnabled = true;
+    private bool sfxEnabled = true;
+
+    // Context volume (changes based on menu/game/gameover)
+    private float contextMusicVolume = 0.05f;
 
     private const int SampleRate = 44100;
+
+    private const string PrefMusicVol = "Minesweeper_MusicVolume";
+    private const string PrefSfxVol = "Minesweeper_SfxVolume";
+    private const string PrefMusicEnabled = "Minesweeper_MusicEnabled";
+    private const string PrefSfxEnabled = "Minesweeper_SfxEnabled";
 
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
+            Instance.SetMenuVolume();
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        LoadSettings();
 
         if (sfxSource == null)
         {
@@ -49,79 +64,154 @@ public class SoundManager : MonoBehaviour
         GenerateAllClips();
         ambientClip = GenerateAmbientMusic();
         musicSource.clip = ambientClip;
+
+        // Auto-start music at menu volume
+        if (musicEnabled)
+        {
+            contextMusicVolume = 0.05f;
+            musicSource.Play();
+            FadeMusicTo(GetEffectiveMusicVolume(), 2f);
+        }
+    }
+
+    // ========== VOLUME HELPERS ==========
+
+    private float GetEffectiveMusicVolume()
+    {
+        return contextMusicVolume * userMusicVolume * (musicEnabled ? 1f : 0f);
+    }
+
+    private float GetEffectiveSfxVolume(float baseVolume)
+    {
+        return baseVolume * userSfxVolume * (sfxEnabled ? 1f : 0f);
+    }
+
+    private void ApplyMusicVolume(float fadeDuration)
+    {
+        FadeMusicTo(GetEffectiveMusicVolume(), fadeDuration);
     }
 
     // ========== SFX PUBLIC API ==========
 
     public void PlayReveal()
     {
-        sfxSource.PlayOneShot(revealClip, 0.4f);
+        sfxSource.PlayOneShot(revealClip, GetEffectiveSfxVolume(0.4f));
     }
 
     public void PlaySweep()
     {
-        sfxSource.PlayOneShot(sweepClip, 0.5f);
+        sfxSource.PlayOneShot(sweepClip, GetEffectiveSfxVolume(0.5f));
     }
 
     public void PlayFlag()
     {
-        sfxSource.PlayOneShot(flagClip, 0.5f);
+        sfxSource.PlayOneShot(flagClip, GetEffectiveSfxVolume(0.5f));
     }
 
     public void PlayUnflag()
     {
-        sfxSource.PlayOneShot(unflagClip, 0.5f);
+        sfxSource.PlayOneShot(unflagClip, GetEffectiveSfxVolume(0.5f));
     }
 
     public void PlayExplosion()
     {
-        sfxSource.PlayOneShot(explosionClip, 0.7f);
+        sfxSource.PlayOneShot(explosionClip, GetEffectiveSfxVolume(0.7f));
     }
 
     public void PlayWin()
     {
-        sfxSource.PlayOneShot(winClip, 0.6f);
+        sfxSource.PlayOneShot(winClip, GetEffectiveSfxVolume(0.6f));
     }
 
     public void PlayLose()
     {
-        sfxSource.PlayOneShot(loseClip, 0.5f);
+        sfxSource.PlayOneShot(loseClip, GetEffectiveSfxVolume(0.5f));
     }
 
-    // ========== MUSIC PUBLIC API ==========
+    // ========== MUSIC CONTEXT API ==========
 
-    public void StartMusic()
+    public void SetMenuVolume()
     {
-        if (!musicEnabled) return;
-        musicTargetVolume = 0.15f;
-        if (musicSource.isPlaying)
-        {
-            FadeMusicTo(musicTargetVolume, 1f);
-            return;
-        }
-        musicSource.Play();
-        FadeMusicTo(musicTargetVolume, 2f);
+        contextMusicVolume = 0.05f;
+        ApplyMusicVolume(1f);
     }
 
-    public void StopMusic()
+    public void SetGameVolume()
     {
-        FadeMusicTo(0f, 1f, true);
+        contextMusicVolume = 0.15f;
+        if (!musicSource.isPlaying && musicEnabled)
+            musicSource.Play();
+        ApplyMusicVolume(1f);
     }
 
-    public void SetMusicVolume(float volume)
+    public void SetLowVolume()
     {
-        musicTargetVolume = volume;
-        FadeMusicTo(volume, 0.5f);
+        contextMusicVolume = 0.08f;
+        ApplyMusicVolume(0.5f);
     }
 
-    public void ToggleMusic()
+    // ========== SETTINGS API (for UI sliders/toggles) ==========
+
+    public void SetMusicUserVolume(float vol)
     {
-        musicEnabled = !musicEnabled;
+        userMusicVolume = Mathf.Clamp01(vol);
+        ApplyMusicVolume(0.2f);
+        SaveSettings();
+    }
+
+    public void SetSfxUserVolume(float vol)
+    {
+        userSfxVolume = Mathf.Clamp01(vol);
+        SaveSettings();
+    }
+
+    public void SetMusicEnabled(bool enabled)
+    {
+        musicEnabled = enabled;
         if (musicEnabled)
-            StartMusic();
+        {
+            if (!musicSource.isPlaying)
+                musicSource.Play();
+            ApplyMusicVolume(0.5f);
+        }
         else
-            StopMusic();
+        {
+            FadeMusicTo(0f, 0.5f, true);
+        }
+        SaveSettings();
     }
+
+    public void SetSfxEnabled(bool enabled)
+    {
+        sfxEnabled = enabled;
+        SaveSettings();
+    }
+
+    public float GetMusicVolume() { return userMusicVolume; }
+    public float GetSfxVolume() { return userSfxVolume; }
+    public bool IsMusicEnabled() { return musicEnabled; }
+    public bool IsSfxEnabled() { return sfxEnabled; }
+
+    // ========== PERSISTENCE ==========
+
+    private void LoadSettings()
+    {
+        userMusicVolume = PlayerPrefs.GetFloat(PrefMusicVol, 1f);
+        userSfxVolume = PlayerPrefs.GetFloat(PrefSfxVol, 1f);
+        musicEnabled = PlayerPrefs.GetInt(PrefMusicEnabled, 1) == 1;
+        sfxEnabled = PlayerPrefs.GetInt(PrefSfxEnabled, 1) == 1;
+    }
+
+    private void SaveSettings()
+    {
+        PlayerPrefs.SetFloat(PrefMusicVol, userMusicVolume);
+        PlayerPrefs.SetFloat(PrefSfxVol, userSfxVolume);
+        PlayerPrefs.SetInt(PrefMusicEnabled, musicEnabled ? 1 : 0);
+        PlayerPrefs.SetInt(PrefSfxEnabled, sfxEnabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    // ========== FADE SYSTEM ==========
 
     private void FadeMusicTo(float target, float duration, bool stopAfter = false)
     {
@@ -374,14 +464,11 @@ public class SoundManager : MonoBehaviour
         int sampleCount = (int)(SampleRate * duration);
         float[] samples = new float[sampleCount];
 
-        // Deterministic random for consistent music
         System.Random rng = new System.Random(42);
 
-        // Pre-calculate melody note events
-        float[] melodyFreqs = { 262f, 294f, 330f, 392f, 440f }; // C4 D4 E4 G4 A4
-        float[] chimeFreqs = { 523f, 659f, 784f }; // C5 E5 G5
+        float[] melodyFreqs = { 262f, 294f, 330f, 392f, 440f };
+        float[] chimeFreqs = { 523f, 659f, 784f };
 
-        // Generate melody schedule: note start times and frequencies
         int melodyCount = 50;
         float[] melodyStarts = new float[melodyCount];
         float[] melodyNotes = new float[melodyCount];
@@ -391,12 +478,11 @@ public class SoundManager : MonoBehaviour
         {
             melodyStarts[m] = melodyTime;
             melodyNotes[m] = melodyFreqs[rng.Next(melodyFreqs.Length)];
-            melodyDurations[m] = 0.3f + (float)rng.NextDouble() * 0.2f; // 0.3-0.5s
-            melodyTime += melodyDurations[m] + 0.5f + (float)rng.NextDouble() * 1f; // 0.5-1.5s gap
+            melodyDurations[m] = 0.3f + (float)rng.NextDouble() * 0.2f;
+            melodyTime += melodyDurations[m] + 0.5f + (float)rng.NextDouble() * 1f;
             if (melodyTime > duration - 3f) break;
         }
 
-        // Generate chime schedule
         int chimeCount = 12;
         float[] chimeStarts = new float[chimeCount];
         float[] chimeNotes = new float[chimeCount];
@@ -405,35 +491,31 @@ public class SoundManager : MonoBehaviour
         {
             chimeStarts[c] = chimeTime;
             chimeNotes[c] = chimeFreqs[rng.Next(chimeFreqs.Length)];
-            chimeTime += 3f + (float)rng.NextDouble() * 3f; // 3-6s gap
+            chimeTime += 3f + (float)rng.NextDouble() * 3f;
             if (chimeTime > duration - 3f) break;
         }
 
-        float fadeZone = 2f; // fade in/out zone for smooth loop
+        float fadeZone = 2f;
 
         for (int i = 0; i < sampleCount; i++)
         {
             float t = (float)i / SampleRate;
             float sample = 0f;
 
-            // Loop crossfade envelope: fade in first 2s, fade out last 2s
             float loopEnv = 1f;
             if (t < fadeZone)
                 loopEnv = t / fadeZone;
             else if (t > duration - fadeZone)
                 loopEnv = (duration - t) / fadeZone;
 
-            // === PAD LAYER ===
             float padTremolo = 0.5f + 0.5f * Mathf.Sin(0.15f * 2f * Mathf.PI * t);
-            sample += Mathf.Sin(2f * Mathf.PI * 131f * t) * 0.12f * padTremolo;  // C3
-            sample += Mathf.Sin(2f * Mathf.PI * 196f * t) * 0.08f * padTremolo;  // G3
-            sample += Mathf.Sin(2f * Mathf.PI * 165f * t) * 0.06f * padTremolo;  // E3
+            sample += Mathf.Sin(2f * Mathf.PI * 131f * t) * 0.12f * padTremolo;
+            sample += Mathf.Sin(2f * Mathf.PI * 196f * t) * 0.08f * padTremolo;
+            sample += Mathf.Sin(2f * Mathf.PI * 165f * t) * 0.06f * padTremolo;
 
-            // Slow pad drift with secondary tremolo
             float padTremolo2 = 0.5f + 0.5f * Mathf.Sin(0.23f * 2f * Mathf.PI * t);
-            sample += Mathf.Sin(2f * Mathf.PI * 98f * t) * 0.05f * padTremolo2;  // G2 sub
+            sample += Mathf.Sin(2f * Mathf.PI * 98f * t) * 0.05f * padTremolo2;
 
-            // === MELODY LAYER ===
             for (int m = 0; m < melodyCount; m++)
             {
                 if (melodyStarts[m] == 0f) break;
@@ -446,34 +528,30 @@ public class SoundManager : MonoBehaviour
                     float noteT = t - noteStart;
                     float noteProgress = noteT / noteDur;
 
-                    // Soft attack (20%) and decay (80%)
                     float env;
                     if (noteProgress < 0.2f)
                         env = noteProgress / 0.2f;
                     else
                         env = 1f - (noteProgress - 0.2f) / 0.8f;
 
-                    env *= env; // smoother curve
+                    env *= env;
                     sample += Mathf.Sin(2f * Mathf.PI * melodyNotes[m] * noteT) * 0.14f * env;
                 }
             }
 
-            // === CHIME LAYER ===
             for (int c = 0; c < chimeCount; c++)
             {
                 if (chimeStarts[c] == 0f) break;
                 float noteStart = chimeStarts[c];
-                float chimeDur = 1.5f; // long ring
+                float chimeDur = 1.5f;
 
                 if (t >= noteStart && t < noteStart + chimeDur)
                 {
                     float noteT = t - noteStart;
                     float noteProgress = noteT / chimeDur;
 
-                    // Very fast attack, long exponential decay
                     float env = Mathf.Exp(-noteProgress * 4f);
                     sample += Mathf.Sin(2f * Mathf.PI * chimeNotes[c] * noteT) * 0.06f * env;
-                    // Add octave harmonic for shimmer
                     sample += Mathf.Sin(2f * Mathf.PI * chimeNotes[c] * 2f * noteT) * 0.02f * env;
                 }
             }

@@ -157,7 +157,7 @@ public class Board : MonoBehaviour
         GenerateBoard();
         DrawBoard();
 
-        GetSoundManager()?.StartMusic();
+        GetSoundManager()?.SetGameVolume();
     }
 
     private void CalculateGridLayout()
@@ -459,7 +459,7 @@ public class Board : MonoBehaviour
         var smWin = GetSoundManager();
         if (smWin != null)
         {
-            smWin.SetMusicVolume(0.05f);
+            smWin.SetLowVolume();
             smWin.PlayWin();
         }
         StartCoroutine(SpawnConfetti());
@@ -477,7 +477,7 @@ public class Board : MonoBehaviour
         var smLose = GetSoundManager();
         if (smLose != null)
         {
-            smLose.SetMusicVolume(0.05f);
+            smLose.SetLowVolume();
             smLose.PlayExplosion();
             StartCoroutine(PlayLoseDelayed(0.3f));
         }
