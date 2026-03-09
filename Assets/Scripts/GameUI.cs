@@ -406,7 +406,7 @@ public class GameUI : MonoBehaviour
         }
     }
 
-    public void ShowEndGame(bool won, int timeSeconds, bool isNewRecord)
+    public void ShowEndGame(bool won, int timeSeconds, bool isNewRecord, bool botUsed)
     {
         // Stop bot if running
         if (bot != null && bot.IsRunning)
@@ -421,31 +421,40 @@ public class GameUI : MonoBehaviour
 
         if (won)
         {
-            endGameMessage.text = "Kazandiniz!";
+            endGameMessage.text = botUsed ? "Kazandiniz! (Bot)" : "Kazandiniz!";
             endGameMessage.color = new Color(0.2f, 0.9f, 0.2f);
         }
         else
         {
-            endGameMessage.text = "Kaybettiniz!";
+            endGameMessage.text = botUsed ? "Kaybettiniz! (Bot)" : "Kaybettiniz!";
             endGameMessage.color = new Color(0.9f, 0.2f, 0.2f);
         }
 
         // End game stats
-        if (endGameStatsText != null && statsManager != null)
+        if (endGameStatsText != null)
         {
-            DifficultyStats stats = statsManager.GetStats(currentDifficulty);
-            string statsText = "";
-
-            if (won)
+            if (botUsed)
             {
-                statsText = $"Sure: {FormatTime(timeSeconds)}";
-                if (isNewRecord)
-                    statsText += "  <color=#FFD700>Yeni Rekor!</color>";
-                statsText += "\n";
+                endGameStatsText.text = "Bot kullanildigi icin bu tur\nistatistiklere dahil edilmedi.";
+                endGameStatsText.color = new Color(0.7f, 0.7f, 0.3f);
             }
+            else if (statsManager != null)
+            {
+                DifficultyStats stats = statsManager.GetStats(currentDifficulty);
+                string statsText = "";
 
-            statsText += $"Kazanma Orani: %{stats.winRate:F0}";
-            endGameStatsText.text = statsText;
+                if (won)
+                {
+                    statsText = $"Sure: {FormatTime(timeSeconds)}";
+                    if (isNewRecord)
+                        statsText += "  <color=#FFD700>Yeni Rekor!</color>";
+                    statsText += "\n";
+                }
+
+                statsText += $"Kazanma Orani: %{stats.winRate:F0}";
+                endGameStatsText.text = statsText;
+                endGameStatsText.color = Color.white;
+            }
         }
     }
 

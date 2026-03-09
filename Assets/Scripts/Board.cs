@@ -28,6 +28,7 @@ public class Board : MonoBehaviour
     private int flagCount = 0;
     private float timer = 0f;
     private bool flagMode = false;
+    private bool botUsedThisRound = false;
 
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
@@ -58,7 +59,16 @@ public class Board : MonoBehaviour
     private float cellSize;
     private float cellScale;
 
-    public bool IsBotPlaying { get; set; }
+    private bool _isBotPlaying;
+    public bool IsBotPlaying
+    {
+        get => _isBotPlaying;
+        set
+        {
+            _isBotPlaying = value;
+            if (value) botUsedThisRound = true;
+        }
+    }
 
     private SoundManager GetSoundManager()
     {
@@ -152,7 +162,8 @@ public class Board : MonoBehaviour
         flagCount = 0;
         timer = 0f;
         flagMode = false;
-        IsBotPlaying = false;
+        botUsedThisRound = false;
+        _isBotPlaying = false;
 
         CalculateGridLayout();
         GenerateBoard();
@@ -465,8 +476,15 @@ public class Board : MonoBehaviour
         }
         StartCoroutine(SpawnConfetti());
         int timeSeconds = Mathf.FloorToInt(timer);
-        bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
-        gameUI.ShowEndGame(true, timeSeconds, isNewRecord);
+        if (botUsedThisRound)
+        {
+            gameUI.ShowEndGame(true, timeSeconds, false, true);
+        }
+        else
+        {
+            bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
+            gameUI.ShowEndGame(true, timeSeconds, isNewRecord, false);
+        }
     }
 
     private void GameOver(int clickedX, int clickedY)
@@ -504,8 +522,15 @@ public class Board : MonoBehaviour
         }
 
         int timeSeconds = Mathf.FloorToInt(timer);
-        statsManager.RecordGame(currentDifficulty, false, timeSeconds);
-        gameUI.ShowEndGame(false, timeSeconds, false);
+        if (botUsedThisRound)
+        {
+            gameUI.ShowEndGame(false, timeSeconds, false, true);
+        }
+        else
+        {
+            statsManager.RecordGame(currentDifficulty, false, timeSeconds);
+            gameUI.ShowEndGame(false, timeSeconds, false, false);
+        }
     }
 
     private IEnumerator ShakeEffect()
@@ -1006,6 +1031,8 @@ public class Board : MonoBehaviour
     {
         return flagMode;
     }
+
+    public bool WasBotUsed() => botUsedThisRound;
 
     public void HandleRightClick()
     {
