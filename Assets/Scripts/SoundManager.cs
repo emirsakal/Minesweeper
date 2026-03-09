@@ -16,6 +16,7 @@ public class SoundManager : MonoBehaviour
     private AudioClip explosionClip;
     private AudioClip winClip;
     private AudioClip loseClip;
+    private AudioClip buttonClickClip;
     private AudioClip ambientClip;
 
     private Coroutine musicFadeCoroutine;
@@ -126,6 +127,11 @@ public class SoundManager : MonoBehaviour
     public void PlayLose()
     {
         sfxSource.PlayOneShot(loseClip, GetEffectiveSfxVolume(0.5f));
+    }
+
+    public void PlayButtonClick()
+    {
+        sfxSource.PlayOneShot(buttonClickClip, GetEffectiveSfxVolume(0.7f));
     }
 
     // ========== MUSIC CONTEXT API ==========
@@ -249,6 +255,7 @@ public class SoundManager : MonoBehaviour
         explosionClip = GenerateExplosionClip();
         winClip = GenerateWinClip();
         loseClip = GenerateLoseClip();
+        buttonClickClip = GenerateButtonClickClip();
     }
 
     private AudioClip GenerateRevealClip()
@@ -452,6 +459,29 @@ public class SoundManager : MonoBehaviour
         }
 
         AudioClip clip = AudioClip.Create("Lose", sampleCount, 1, SampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
+    private AudioClip GenerateButtonClickClip()
+    {
+        float duration = 0.06f;
+        int sampleCount = (int)(SampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / SampleRate;
+            float envelope = Mathf.Pow(1f - t / duration, 3f);
+
+            float low = Mathf.Sin(2f * Mathf.PI * 400f * t) * 0.5f;
+            float high = Mathf.Sin(2f * Mathf.PI * 1200f * t) * 0.3f;
+            float noise = (t < 0.008f) ? Random.Range(-0.2f, 0.2f) : 0f;
+
+            samples[i] = (low + high + noise) * envelope;
+        }
+
+        AudioClip clip = AudioClip.Create("ButtonClick", sampleCount, 1, SampleRate, false);
         clip.SetData(samples, 0);
         return clip;
     }

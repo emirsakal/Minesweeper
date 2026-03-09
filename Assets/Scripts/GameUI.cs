@@ -71,6 +71,23 @@ public class GameUI : MonoBehaviour
     {
         this.board = board;
 
+        // Button click sounds (added first so sound plays before action)
+        AddClickSound(easyButton);
+        AddClickSound(mediumButton);
+        AddClickSound(hardButton);
+        AddClickSound(restartButton);
+        AddClickSound(endRestartButton);
+        AddClickSound(botButton);
+        AddClickSound(settingsButton);
+        AddClickSound(gameSettingsButton);
+        AddClickSound(settingsBackButton);
+        AddClickSound(statsButton);
+        AddClickSound(statsBackButton);
+        AddClickSound(statsResetButton);
+        AddClickSound(statsEasyTab);
+        AddClickSound(statsMediumTab);
+        AddClickSound(statsHardTab);
+
         // Difficulty buttons
         easyButton.onClick.AddListener(() => OnDifficultySelected(9, 9, 10, "Easy"));
         mediumButton.onClick.AddListener(() => OnDifficultySelected(16, 16, 40, "Medium"));
@@ -244,6 +261,14 @@ public class GameUI : MonoBehaviour
         TextMeshProUGUI label = tab.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
             label.color = active ? TabActiveTextColor : TabInactiveTextColor;
+    }
+
+    // ========== BUTTON CLICK SOUND ==========
+
+    private void AddClickSound(Button button)
+    {
+        if (button == null) return;
+        button.onClick.AddListener(() => SoundManager.Instance?.PlayButtonClick());
     }
 
     // ========== SETTINGS ==========
