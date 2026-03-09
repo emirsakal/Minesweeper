@@ -59,6 +59,12 @@ public class Board : MonoBehaviour
 
     public bool IsBotPlaying { get; set; }
 
+    private SoundManager GetSoundManager()
+    {
+        if (soundManager != null) return soundManager;
+        return SoundManager.Instance;
+    }
+
     // Cell colors
     private static readonly Color ClosedColor = new Color(0.78f, 0.78f, 0.82f);
     private static readonly Color RevealedColor = new Color(0.5f, 0.5f, 0.5f);
@@ -151,7 +157,7 @@ public class Board : MonoBehaviour
         GenerateBoard();
         DrawBoard();
 
-        if (soundManager != null) soundManager.StartMusic();
+        GetSoundManager()?.StartMusic();
     }
 
     private void CalculateGridLayout()
@@ -311,7 +317,7 @@ public class Board : MonoBehaviour
         if (cell.type == CellType.Number)
         {
             cell.isRevealed = true;
-            if (soundManager != null) soundManager.PlayReveal();
+            GetSoundManager()?.PlayReveal();
             UpdateCellVisual(x, y);
             CheckWin();
             return;
@@ -358,7 +364,7 @@ public class Board : MonoBehaviour
             }
         }
 
-        if (waveCells.Count >= 5 && soundManager != null) soundManager.PlaySweep();
+        if (waveCells.Count >= 5) GetSoundManager()?.PlaySweep();
 
         // Start visual wave animation (runs in background, doesn't block gameplay)
         StartCoroutine(AnimateFloodFill(waveCells));
@@ -426,10 +432,11 @@ public class Board : MonoBehaviour
 
         cell.isFlagged = !cell.isFlagged;
         flagCount += cell.isFlagged ? 1 : -1;
-        if (soundManager != null)
+        var sm = GetSoundManager();
+        if (sm != null)
         {
-            if (cell.isFlagged) soundManager.PlayFlag();
-            else soundManager.PlayUnflag();
+            if (cell.isFlagged) sm.PlayFlag();
+            else sm.PlayUnflag();
         }
         UpdateCellVisual(x, y);
         gameUI.UpdateMineCounter(mineCount - flagCount);
@@ -449,10 +456,11 @@ public class Board : MonoBehaviour
 
         gameState = GameState.Won;
         Debug.Log("You Win!");
-        if (soundManager != null)
+        var smWin = GetSoundManager();
+        if (smWin != null)
         {
-            soundManager.SetMusicVolume(0.05f);
-            soundManager.PlayWin();
+            smWin.SetMusicVolume(0.05f);
+            smWin.PlayWin();
         }
         StartCoroutine(SpawnConfetti());
         int timeSeconds = Mathf.FloorToInt(timer);
@@ -466,10 +474,11 @@ public class Board : MonoBehaviour
         explodedMinePos = new Vector2Int(clickedX, clickedY);
         Debug.Log("Game Over!");
 
-        if (soundManager != null)
+        var smLose = GetSoundManager();
+        if (smLose != null)
         {
-            soundManager.SetMusicVolume(0.05f);
-            soundManager.PlayExplosion();
+            smLose.SetMusicVolume(0.05f);
+            smLose.PlayExplosion();
             StartCoroutine(PlayLoseDelayed(0.3f));
         }
 
@@ -524,7 +533,7 @@ public class Board : MonoBehaviour
     private IEnumerator PlayLoseDelayed(float delay)
     {
         yield return new WaitForSeconds(delay);
-        if (soundManager != null) soundManager.PlayLose();
+        GetSoundManager()?.PlayLose();
     }
 
     private IEnumerator SpawnConfetti()

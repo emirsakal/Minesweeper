@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class SoundManager : MonoBehaviour
 {
+    public static SoundManager Instance { get; private set; }
+
     [SerializeField] private AudioSource sfxSource;
 
     private AudioSource musicSource;
@@ -24,6 +26,15 @@ public class SoundManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
         if (sfxSource == null)
         {
             sfxSource = gameObject.AddComponent<AudioSource>();
@@ -83,8 +94,12 @@ public class SoundManager : MonoBehaviour
     {
         if (!musicEnabled) return;
         musicTargetVolume = 0.15f;
-        if (!musicSource.isPlaying)
-            musicSource.Play();
+        if (musicSource.isPlaying)
+        {
+            FadeMusicTo(musicTargetVolume, 1f);
+            return;
+        }
+        musicSource.Play();
         FadeMusicTo(musicTargetVolume, 2f);
     }
 
