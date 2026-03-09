@@ -124,12 +124,6 @@ public class Board : MonoBehaviour
                     HandleLeftClick(gridPos.Value);
             }
         }
-        else if (Input.GetMouseButtonDown(1))
-        {
-            Vector2Int? gridPos = GetGridPosition();
-            if (gridPos.HasValue)
-                ToggleFlag(gridPos.Value.x, gridPos.Value.y);
-        }
     }
 
     public void InitializeBoard(int w, int h, int mines, string difficulty)
@@ -800,6 +794,32 @@ public class Board : MonoBehaviour
                 UpdateCellVisual(x, y);
             }
         }
+
+        CreateInputOverlay(totalW, totalH);
+    }
+
+    private void CreateInputOverlay(float totalW, float totalH)
+    {
+        float padding = cellSize * 0.3f;
+
+        GameObject overlay = new GameObject("InputOverlay");
+        overlay.transform.SetParent(gridContainer, false);
+
+        RectTransform rt = overlay.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(totalW + padding * 2f, totalH + padding * 2f);
+        rt.anchoredPosition = Vector2.zero;
+
+        Image img = overlay.AddComponent<Image>();
+        img.color = new Color(0, 0, 0, 0);
+        img.raycastTarget = true;
+
+        GridInputHandler inputHandler = overlay.AddComponent<GridInputHandler>();
+        inputHandler.Initialize(this);
+
+        overlay.transform.SetAsLastSibling();
     }
 
     private void UpdateCellVisual(int x, int y)
@@ -985,6 +1005,17 @@ public class Board : MonoBehaviour
     public bool GetFlagMode()
     {
         return flagMode;
+    }
+
+    public void HandleRightClick()
+    {
+        if (!boardInitialized || gameState != GameState.Playing || IsBotPlaying) return;
+
+        Vector2Int? gridPos = GetGridPosition();
+        if (gridPos.HasValue)
+        {
+            ToggleFlag(gridPos.Value.x, gridPos.Value.y);
+        }
     }
 
     // ========== PUBLIC API FOR BOT ==========
