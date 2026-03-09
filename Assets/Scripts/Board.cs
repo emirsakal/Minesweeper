@@ -30,6 +30,7 @@ public class Board : MonoBehaviour
 
     [SerializeField] private GameUI gameUI;
     [SerializeField] private StatsManager statsManager;
+    [SerializeField] private SoundManager soundManager;
     [SerializeField] private RectTransform gridContainer;
 
     [Header("Cell Visuals")]
@@ -308,6 +309,7 @@ public class Board : MonoBehaviour
         if (cell.type == CellType.Number)
         {
             cell.isRevealed = true;
+            if (soundManager != null) soundManager.PlayReveal();
             UpdateCellVisual(x, y);
             CheckWin();
             return;
@@ -353,6 +355,8 @@ public class Board : MonoBehaviour
                 }
             }
         }
+
+        if (waveCells.Count >= 5 && soundManager != null) soundManager.PlaySweep();
 
         // Start visual wave animation (runs in background, doesn't block gameplay)
         StartCoroutine(AnimateFloodFill(waveCells));
@@ -420,6 +424,11 @@ public class Board : MonoBehaviour
 
         cell.isFlagged = !cell.isFlagged;
         flagCount += cell.isFlagged ? 1 : -1;
+        if (soundManager != null)
+        {
+            if (cell.isFlagged) soundManager.PlayFlag();
+            else soundManager.PlayUnflag();
+        }
         UpdateCellVisual(x, y);
         gameUI.UpdateMineCounter(mineCount - flagCount);
     }
@@ -438,6 +447,7 @@ public class Board : MonoBehaviour
 
         gameState = GameState.Won;
         Debug.Log("You Win!");
+        if (soundManager != null) soundManager.PlayWin();
         StartCoroutine(SpawnConfetti());
         int timeSeconds = Mathf.FloorToInt(timer);
         bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
@@ -449,6 +459,12 @@ public class Board : MonoBehaviour
         gameState = GameState.Lost;
         explodedMinePos = new Vector2Int(clickedX, clickedY);
         Debug.Log("Game Over!");
+
+        if (soundManager != null)
+        {
+            soundManager.PlayExplosion();
+            StartCoroutine(PlayLoseDelayed(0.3f));
+        }
 
         shakeCoroutine = StartCoroutine(ShakeEffect());
 
@@ -496,6 +512,12 @@ public class Board : MonoBehaviour
 
         gridContainer.anchoredPosition = originalPos;
         shakeCoroutine = null;
+    }
+
+    private IEnumerator PlayLoseDelayed(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (soundManager != null) soundManager.PlayLose();
     }
 
     private IEnumerator SpawnConfetti()
