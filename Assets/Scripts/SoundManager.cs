@@ -1,8 +1,11 @@
+using System.Collections;
 using UnityEngine;
 
 public class SoundManager : MonoBehaviour
 {
     [SerializeField] private AudioSource sfxSource;
+
+    private AudioSource musicSource;
 
     private AudioClip revealClip;
     private AudioClip sweepClip;
@@ -11,6 +14,11 @@ public class SoundManager : MonoBehaviour
     private AudioClip explosionClip;
     private AudioClip winClip;
     private AudioClip loseClip;
+    private AudioClip ambientClip;
+
+    private Coroutine musicFadeCoroutine;
+    private float musicTargetVolume = 0.15f;
+    private bool musicEnabled = true;
 
     private const int SampleRate = 44100;
 
@@ -22,21 +30,17 @@ public class SoundManager : MonoBehaviour
             sfxSource.playOnAwake = false;
         }
 
+        musicSource = gameObject.AddComponent<AudioSource>();
+        musicSource.playOnAwake = false;
+        musicSource.loop = true;
+        musicSource.volume = 0f;
+
         GenerateAllClips();
+        ambientClip = GenerateAmbientMusic();
+        musicSource.clip = ambientClip;
     }
 
-    private void GenerateAllClips()
-    {
-        revealClip = GenerateRevealClip();
-        sweepClip = GenerateSweepClip();
-        flagClip = GenerateFlagClip();
-        unflagClip = GenerateUnflagClip();
-        explosionClip = GenerateExplosionClip();
-        winClip = GenerateWinClip();
-        loseClip = GenerateLoseClip();
-    }
-
-    // ========== PUBLIC API ==========
+    // ========== SFX PUBLIC API ==========
 
     public void PlayReveal()
     {
@@ -73,11 +77,77 @@ public class SoundManager : MonoBehaviour
         sfxSource.PlayOneShot(loseClip, 0.5f);
     }
 
-    // ========== CLIP GENERATION ==========
+    // ========== MUSIC PUBLIC API ==========
+
+    public void StartMusic()
+    {
+        if (!musicEnabled) return;
+        musicTargetVolume = 0.15f;
+        if (!musicSource.isPlaying)
+            musicSource.Play();
+        FadeMusicTo(musicTargetVolume, 2f);
+    }
+
+    public void StopMusic()
+    {
+        FadeMusicTo(0f, 1f, true);
+    }
+
+    public void SetMusicVolume(float volume)
+    {
+        musicTargetVolume = volume;
+        FadeMusicTo(volume, 0.5f);
+    }
+
+    public void ToggleMusic()
+    {
+        musicEnabled = !musicEnabled;
+        if (musicEnabled)
+            StartMusic();
+        else
+            StopMusic();
+    }
+
+    private void FadeMusicTo(float target, float duration, bool stopAfter = false)
+    {
+        if (musicFadeCoroutine != null)
+            StopCoroutine(musicFadeCoroutine);
+        musicFadeCoroutine = StartCoroutine(FadeMusicCoroutine(target, duration, stopAfter));
+    }
+
+    private IEnumerator FadeMusicCoroutine(float target, float duration, bool stopAfter)
+    {
+        float startVol = musicSource.volume;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            musicSource.volume = Mathf.Lerp(startVol, target, elapsed / duration);
+            yield return null;
+        }
+
+        musicSource.volume = target;
+        if (stopAfter)
+            musicSource.Stop();
+        musicFadeCoroutine = null;
+    }
+
+    // ========== SFX CLIP GENERATION ==========
+
+    private void GenerateAllClips()
+    {
+        revealClip = GenerateRevealClip();
+        sweepClip = GenerateSweepClip();
+        flagClip = GenerateFlagClip();
+        unflagClip = GenerateUnflagClip();
+        explosionClip = GenerateExplosionClip();
+        winClip = GenerateWinClip();
+        loseClip = GenerateLoseClip();
+    }
 
     private AudioClip GenerateRevealClip()
     {
-        // Short click/tick - high frequency sine with fast fade
         float duration = 0.05f;
         int sampleCount = (int)(SampleRate * duration);
         float[] samples = new float[sampleCount];
@@ -87,7 +157,7 @@ public class SoundManager : MonoBehaviour
         {
             float t = (float)i / SampleRate;
             float envelope = 1f - (float)i / sampleCount;
-            envelope *= envelope; // quadratic fade out
+            envelope *= envelope;
             samples[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * envelope;
         }
 
@@ -98,7 +168,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateSweepClip()
     {
-        // Swoosh - frequency sweep low to high with light white noise
         float duration = 0.15f;
         int sampleCount = (int)(SampleRate * duration);
         float[] samples = new float[sampleCount];
@@ -122,7 +191,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateFlagClip()
     {
-        // Two-tone beep: 600Hz then 800Hz
         float toneDur = 0.05f;
         float gap = 0.02f;
         float totalDur = toneDur * 2f + gap;
@@ -155,7 +223,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateUnflagClip()
     {
-        // Reverse two-tone: 800Hz then 500Hz
         float toneDur = 0.05f;
         float gap = 0.02f;
         float totalDur = toneDur * 2f + gap;
@@ -188,7 +255,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateExplosionClip()
     {
-        // Low boom: white noise + low sine, fast attack slow decay
         float duration = 0.4f;
         int sampleCount = (int)(SampleRate * duration);
         float[] samples = new float[sampleCount];
@@ -198,7 +264,6 @@ public class SoundManager : MonoBehaviour
             float t = (float)i / SampleRate;
             float progress = (float)i / sampleCount;
 
-            // Fast attack (first 5%), slow exponential decay
             float envelope;
             if (progress < 0.05f)
                 envelope = progress / 0.05f;
@@ -218,7 +283,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateWinClip()
     {
-        // Melodic rising three notes: C5 E5 G5
         float noteDur = 0.15f;
         float totalDur = noteDur * 3f;
         int sampleCount = (int)(SampleRate * totalDur);
@@ -236,7 +300,6 @@ public class SoundManager : MonoBehaviour
                 float t = (float)(i - noteStart) / SampleRate;
                 float noteProgress = (float)(i - noteStart) / (noteEnd - noteStart);
 
-                // Smooth attack and release
                 float envelope;
                 if (noteProgress < 0.1f)
                     envelope = noteProgress / 0.1f;
@@ -254,7 +317,6 @@ public class SoundManager : MonoBehaviour
 
     private AudioClip GenerateLoseClip()
     {
-        // Sad descending two notes: E4 C4
         float noteDur = 0.2f;
         float totalDur = noteDur * 2f;
         int sampleCount = (int)(SampleRate * totalDur);
@@ -272,20 +334,139 @@ public class SoundManager : MonoBehaviour
                 float t = (float)(i - noteStart) / SampleRate;
                 float noteProgress = (float)(i - noteStart) / (noteEnd - noteStart);
 
-                // Slow fade out
                 float envelope;
                 if (noteProgress < 0.05f)
                     envelope = noteProgress / 0.05f;
                 else
                     envelope = 1f - (noteProgress - 0.05f) / 0.95f;
 
-                envelope *= envelope; // quadratic for sadder feel
+                envelope *= envelope;
 
                 samples[i] = Mathf.Sin(2f * Mathf.PI * freqs[n] * t) * envelope;
             }
         }
 
         AudioClip clip = AudioClip.Create("Lose", sampleCount, 1, SampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
+    // ========== AMBIENT MUSIC GENERATION ==========
+
+    private AudioClip GenerateAmbientMusic()
+    {
+        float duration = 45f;
+        int sampleCount = (int)(SampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        // Deterministic random for consistent music
+        System.Random rng = new System.Random(42);
+
+        // Pre-calculate melody note events
+        float[] melodyFreqs = { 262f, 294f, 330f, 392f, 440f }; // C4 D4 E4 G4 A4
+        float[] chimeFreqs = { 523f, 659f, 784f }; // C5 E5 G5
+
+        // Generate melody schedule: note start times and frequencies
+        int melodyCount = 50;
+        float[] melodyStarts = new float[melodyCount];
+        float[] melodyNotes = new float[melodyCount];
+        float[] melodyDurations = new float[melodyCount];
+        float melodyTime = 1f;
+        for (int m = 0; m < melodyCount; m++)
+        {
+            melodyStarts[m] = melodyTime;
+            melodyNotes[m] = melodyFreqs[rng.Next(melodyFreqs.Length)];
+            melodyDurations[m] = 0.3f + (float)rng.NextDouble() * 0.2f; // 0.3-0.5s
+            melodyTime += melodyDurations[m] + 0.5f + (float)rng.NextDouble() * 1f; // 0.5-1.5s gap
+            if (melodyTime > duration - 3f) break;
+        }
+
+        // Generate chime schedule
+        int chimeCount = 12;
+        float[] chimeStarts = new float[chimeCount];
+        float[] chimeNotes = new float[chimeCount];
+        float chimeTime = 2.5f;
+        for (int c = 0; c < chimeCount; c++)
+        {
+            chimeStarts[c] = chimeTime;
+            chimeNotes[c] = chimeFreqs[rng.Next(chimeFreqs.Length)];
+            chimeTime += 3f + (float)rng.NextDouble() * 3f; // 3-6s gap
+            if (chimeTime > duration - 3f) break;
+        }
+
+        float fadeZone = 2f; // fade in/out zone for smooth loop
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / SampleRate;
+            float sample = 0f;
+
+            // Loop crossfade envelope: fade in first 2s, fade out last 2s
+            float loopEnv = 1f;
+            if (t < fadeZone)
+                loopEnv = t / fadeZone;
+            else if (t > duration - fadeZone)
+                loopEnv = (duration - t) / fadeZone;
+
+            // === PAD LAYER ===
+            float padTremolo = 0.5f + 0.5f * Mathf.Sin(0.15f * 2f * Mathf.PI * t);
+            sample += Mathf.Sin(2f * Mathf.PI * 131f * t) * 0.12f * padTremolo;  // C3
+            sample += Mathf.Sin(2f * Mathf.PI * 196f * t) * 0.08f * padTremolo;  // G3
+            sample += Mathf.Sin(2f * Mathf.PI * 165f * t) * 0.06f * padTremolo;  // E3
+
+            // Slow pad drift with secondary tremolo
+            float padTremolo2 = 0.5f + 0.5f * Mathf.Sin(0.23f * 2f * Mathf.PI * t);
+            sample += Mathf.Sin(2f * Mathf.PI * 98f * t) * 0.05f * padTremolo2;  // G2 sub
+
+            // === MELODY LAYER ===
+            for (int m = 0; m < melodyCount; m++)
+            {
+                if (melodyStarts[m] == 0f) break;
+                float noteStart = melodyStarts[m];
+                float noteDur = melodyDurations[m];
+                float noteEnd = noteStart + noteDur;
+
+                if (t >= noteStart && t < noteEnd)
+                {
+                    float noteT = t - noteStart;
+                    float noteProgress = noteT / noteDur;
+
+                    // Soft attack (20%) and decay (80%)
+                    float env;
+                    if (noteProgress < 0.2f)
+                        env = noteProgress / 0.2f;
+                    else
+                        env = 1f - (noteProgress - 0.2f) / 0.8f;
+
+                    env *= env; // smoother curve
+                    sample += Mathf.Sin(2f * Mathf.PI * melodyNotes[m] * noteT) * 0.14f * env;
+                }
+            }
+
+            // === CHIME LAYER ===
+            for (int c = 0; c < chimeCount; c++)
+            {
+                if (chimeStarts[c] == 0f) break;
+                float noteStart = chimeStarts[c];
+                float chimeDur = 1.5f; // long ring
+
+                if (t >= noteStart && t < noteStart + chimeDur)
+                {
+                    float noteT = t - noteStart;
+                    float noteProgress = noteT / chimeDur;
+
+                    // Very fast attack, long exponential decay
+                    float env = Mathf.Exp(-noteProgress * 4f);
+                    sample += Mathf.Sin(2f * Mathf.PI * chimeNotes[c] * noteT) * 0.06f * env;
+                    // Add octave harmonic for shimmer
+                    sample += Mathf.Sin(2f * Mathf.PI * chimeNotes[c] * 2f * noteT) * 0.02f * env;
+                }
+            }
+
+            samples[i] = Mathf.Clamp(sample * loopEnv, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create("Ambient", sampleCount, 1, SampleRate, false);
         clip.SetData(samples, 0);
         return clip;
     }

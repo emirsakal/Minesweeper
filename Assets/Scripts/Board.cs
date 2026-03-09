@@ -150,6 +150,8 @@ public class Board : MonoBehaviour
         CalculateGridLayout();
         GenerateBoard();
         DrawBoard();
+
+        if (soundManager != null) soundManager.StartMusic();
     }
 
     private void CalculateGridLayout()
@@ -447,7 +449,11 @@ public class Board : MonoBehaviour
 
         gameState = GameState.Won;
         Debug.Log("You Win!");
-        if (soundManager != null) soundManager.PlayWin();
+        if (soundManager != null)
+        {
+            soundManager.SetMusicVolume(0.05f);
+            soundManager.PlayWin();
+        }
         StartCoroutine(SpawnConfetti());
         int timeSeconds = Mathf.FloorToInt(timer);
         bool isNewRecord = statsManager.RecordGame(currentDifficulty, true, timeSeconds);
@@ -462,6 +468,7 @@ public class Board : MonoBehaviour
 
         if (soundManager != null)
         {
+            soundManager.SetMusicVolume(0.05f);
             soundManager.PlayExplosion();
             StartCoroutine(PlayLoseDelayed(0.3f));
         }
