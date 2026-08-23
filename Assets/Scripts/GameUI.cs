@@ -135,12 +135,41 @@ public class GameUI : MonoBehaviour
 
     private void Update()
     {
+        HandleKeyboardShortcuts();
+
         // Auto-update bot button text when bot finishes
         if (bot != null && !bot.IsRunning && botButtonText != null
             && botButtonText.text == "Dur")
         {
             botButtonText.text = "Bot";
             botButtonText.color = Color.white;
+        }
+    }
+
+    // ========== KEYBOARD SHORTCUTS ==========
+
+    private void HandleKeyboardShortcuts()
+    {
+        // Only while the in-game HUD is up and no overlay panel is open
+        if (board == null || topPanel == null || !topPanel.activeSelf) return;
+        if (statsPanel != null && statsPanel.activeSelf) return;
+        if (settingsPanel != null && settingsPanel.activeSelf) return;
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            OnRestartClicked();
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            OnBotClicked();
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            OnFlagModeToggle();
         }
     }
 
